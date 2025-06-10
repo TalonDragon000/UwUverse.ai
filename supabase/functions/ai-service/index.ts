@@ -1,0 +1,129 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+
+const TAVUS_API_URL = 'https://api.tavus.io/v1';
+const TAVUS_KEY_PREFIX = Deno.env.get('TAVUS_KEY_PREFIX');
+const TAVUS_SECRET_KEY = Deno.env.get('TAVUS_SECRET_KEY');
+
+interface CharacterRequest {
+  name: string;
+  gender: string;
+  height: string;
+  build: string;
+  eye_color: string;
+  hair_color: string;
+  skin_tone: string;
+  personality_traits: string[];
+  art_style: string;
+}
+
+interface ChatRequest {
+  message: string;
+  character_id: string;
+  chat_history: {
+    role: 'user' | 'assistant';
+    content: string;
+  }[];
+  character_traits: string[];
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const path = url.pathname.split('/').pop();
+
+    if (!TAVUS_KEY_PREFIX || !TAVUS_SECRET_KEY) {
+      throw new Error('Missing Tavus API credentials');
+    }
+
+    const authHeaders = {
+      'Authorization': `Bearer ${TAVUS_SECRET_KEY}`,
+      'X-API-Key': TAVUS_KEY_PREFIX,
+      'Content-Type': 'application/json',
+    };
+
+    if (path === 'generate-character') {
+      const { name, gender, height, build, eye_color, hair_color, skin_tone, personality_traits, art_style } = await req.json() as CharacterRequest;
+
+      // Call Tavus API to generate character image
+      const response = await fetch(`${TAVUS_API_URL}/generate/character`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          name,
+          attributes: {
+            gender,
+            height,
+            build,
+            eye_color,
+            hair_color,
+            skin_tone,
+            art_style,
+          },
+          personality: personality_traits,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Tavus API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return new Response(
+        JSON.stringify({ image_url: data.image_url }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (path === 'chat') {
+      const { message, character_id, chat_history, character_traits } = await req.json() as ChatRequest;
+
+      // Call Tavus API for chat response
+      const response = await fetch(`${TAVUS_API_URL}/chat`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          message,
+          character_id,
+          chat_history,
+          character_traits,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Tavus API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return new Response(
+        JSON.stringify({ response: data.response }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    throw new Error('Invalid endpoint');
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
