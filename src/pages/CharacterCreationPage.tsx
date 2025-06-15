@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, Sparkles, Play, Square, Volume2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Sparkles, Play, Square, Volume2, AlertCircle } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import { useCharacterStore } from '../stores/characterStore';
 import { useAuthStore } from '../stores/authStore';
@@ -44,6 +44,8 @@ const CharacterCreationPage: React.FC = () => {
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState<string | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [voicesError, setVoicesError] = useState<string | null>(null);
+  const [usingFallbackVoices, setUsingFallbackVoices] = useState(false);
   
   const steps = [
     'Basic Details',
@@ -58,6 +60,8 @@ const CharacterCreationPage: React.FC = () => {
   useEffect(() => {
     const fetchVoices = async () => {
       setLoadingVoices(true);
+      setVoicesError(null);
+      
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-elevenlabs-voices`;
         const headers = {
@@ -70,11 +74,38 @@ const CharacterCreationPage: React.FC = () => {
 
         if (data.success) {
           setVoices(data.voices);
+          setUsingFallbackVoices(data.fallback || false);
+          
+          if (data.fallback && data.message) {
+            setVoicesError(data.message);
+          }
         } else {
-          console.error('Failed to fetch voices:', data.error);
+          throw new Error(data.error || 'Failed to fetch voices');
         }
       } catch (error) {
         console.error('Error fetching voices:', error);
+        setVoicesError('Unable to load voices. Please try again later.');
+        
+        // Set basic fallback voices if everything fails
+        setVoices([
+          {
+            voice_id: 'basic-male',
+            name: 'Default Male Voice',
+            gender: 'male',
+            accent: 'Neutral',
+            age: 'adult',
+            description: 'Standard voice option',
+          },
+          {
+            voice_id: 'basic-female',
+            name: 'Default Female Voice',
+            gender: 'female',
+            accent: 'Neutral',
+            age: 'adult',
+            description: 'Standard voice option',
+          },
+        ]);
+        setUsingFallbackVoices(true);
       } finally {
         setLoadingVoices(false);
       }
@@ -94,6 +125,13 @@ const CharacterCreationPage: React.FC = () => {
   }, [currentAudio]);
 
   const handlePlayPreview = async (voiceId: string, voiceName: string) => {
+    // For fallback voices, just select them without playing audio
+    if (usingFallbackVoices || voiceId.startsWith('fallback-') || voiceId.startsWith('basic-')) {
+      updateCharacterCreationData({ voice_accent: voiceName });
+      setSelectedVoiceId(voiceId);
+      return;
+    }
+
     // Stop any currently playing audio
     if (currentAudio) {
       currentAudio.pause();
@@ -158,9 +196,15 @@ const CharacterCreationPage: React.FC = () => {
         setSelectedVoiceId(voiceId);
       } else {
         console.error('Failed to generate voice preview:', data.error);
+        // Just select the voice without preview
+        updateCharacterCreationData({ voice_accent: voiceName });
+        setSelectedVoiceId(voiceId);
       }
     } catch (error) {
       console.error('Error generating voice preview:', error);
+      // Just select the voice without preview
+      updateCharacterCreationData({ voice_accent: voiceName });
+      setSelectedVoiceId(voiceId);
     } finally {
       setGeneratingPreview(null);
     }
@@ -477,6 +521,17 @@ const CharacterCreationPage: React.FC = () => {
                 Choose Voice
               </label>
               
+              {voicesError && (
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      {voicesError}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               {loadingVoices ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400"></div>
@@ -504,26 +559,36 @@ const CharacterCreationPage: React.FC = () => {
                         </div>
                         
                         <div className="flex items-center gap-2 ml-4">
-                          {currentlyPlaying === voice.voice_id ? (
-                            <button
-                              onClick={handleStopPreview}
-                              className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors duration-200"
-                              title="Stop preview"
-                            >
-                              <Square className="h-4 w-4" />
-                            </button>
+                          {!usingFallbackVoices && !voice.voice_id.startsWith('fallback-') && !voice.voice_id.startsWith('basic-') ? (
+                            currentlyPlaying === voice.voice_id ? (
+                              <button
+                                onClick={handleStopPreview}
+                                className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors duration-200"
+                                title="Stop preview"
+                              >
+                                <Square className="h-4 w-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
+                                disabled={generatingPreview === voice.voice_id}
+                                className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white transition-colors duration-200"
+                                title="Play preview"
+                              >
+                                {generatingPreview === voice.voice_id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </button>
+                            )
                           ) : (
                             <button
                               onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
-                              disabled={generatingPreview === voice.voice_id}
-                              className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white transition-colors duration-200"
-                              title="Play preview"
+                              className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 text-white transition-colors duration-200"
+                              title="Select voice"
                             >
-                              {generatingPreview === voice.voice_id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
+                              <Volume2 className="h-4 w-4" />
                             </button>
                           )}
                           

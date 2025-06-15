@@ -20,6 +20,50 @@ interface ElevenLabsVoice {
   preview_url?: string;
 }
 
+// Fallback voices when ElevenLabs API is not available
+const fallbackVoices = [
+  {
+    voice_id: 'fallback-male-1',
+    name: 'Alex',
+    gender: 'male',
+    accent: 'American',
+    age: 'young adult',
+    description: 'Warm and friendly voice',
+  },
+  {
+    voice_id: 'fallback-male-2',
+    name: 'David',
+    gender: 'male',
+    accent: 'British',
+    age: 'middle aged',
+    description: 'Sophisticated and calm',
+  },
+  {
+    voice_id: 'fallback-female-1',
+    name: 'Sarah',
+    gender: 'female',
+    accent: 'American',
+    age: 'young adult',
+    description: 'Sweet and cheerful voice',
+  },
+  {
+    voice_id: 'fallback-female-2',
+    name: 'Emma',
+    gender: 'female',
+    accent: 'British',
+    age: 'young adult',
+    description: 'Elegant and articulate',
+  },
+  {
+    voice_id: 'fallback-female-3',
+    name: 'Luna',
+    gender: 'female',
+    accent: 'Neutral',
+    age: 'young adult',
+    description: 'Soft and mysterious',
+  },
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -28,8 +72,20 @@ serve(async (req) => {
   try {
     const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
+    // If no API key is available, return fallback voices
     if (!elevenLabsApiKey) {
-      throw new Error('Missing ElevenLabs API key');
+      console.log('ElevenLabs API key not found, using fallback voices');
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          voices: fallbackVoices,
+          fallback: true,
+          message: 'Using fallback voices. Configure ELEVENLABS_API_KEY for full voice selection.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const response = await fetch('https://api.elevenlabs.io/v1/voices', {
@@ -41,7 +97,19 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.statusText}`);
+      console.error(`ElevenLabs API error: ${response.statusText}`);
+      // Fall back to default voices if API fails
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          voices: fallbackVoices,
+          fallback: true,
+          message: 'ElevenLabs API unavailable. Using fallback voices.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const data = await response.json();
@@ -62,7 +130,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        voices: formattedVoices 
+        voices: formattedVoices,
+        fallback: false
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -70,13 +139,16 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error fetching ElevenLabs voices:', error);
+    
+    // Return fallback voices even on error
     return new Response(
       JSON.stringify({ 
-        success: false,
-        error: error.message 
+        success: true,
+        voices: fallbackVoices,
+        fallback: true,
+        message: 'Error occurred. Using fallback voices.'
       }),
       {
-        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
