@@ -26,6 +26,11 @@ interface ChatRequest {
   character_traits: string[];
 }
 
+interface VoicePreviewRequest {
+  voice_id: string;
+  text: string;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -40,6 +45,49 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const path = url.pathname.split('/').pop();
+
+    if (path === 'generate-voice-preview') {
+      const { voice_id, text } = await req.json() as VoicePreviewRequest;
+      
+      const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+      if (!elevenLabsApiKey) {
+        throw new Error('Missing ElevenLabs API key');
+      }
+
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': elevenLabsApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`ElevenLabs API error: ${response.statusText}`);
+      }
+
+      const audioBuffer = await response.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          audio_data: base64Audio,
+          content_type: 'audio/mpeg'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     if (!TAVUS_KEY_PREFIX || !TAVUS_SECRET_KEY) {
       throw new Error('Missing Tavus API credentials');

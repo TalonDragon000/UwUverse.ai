@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Sparkles, Play, Square, Volume2 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import { useCharacterStore } from '../stores/characterStore';
 import { useAuthStore } from '../stores/authStore';
@@ -18,6 +18,16 @@ const MEET_CUTE_SCENARIOS = [
   'coffee shop', 'neighbors', 'childhood friends', 'blind date'
 ];
 
+interface ElevenLabsVoice {
+  voice_id: string;
+  name: string;
+  gender: string;
+  accent: string;
+  age: string;
+  description: string;
+  preview_url?: string;
+}
+
 const CharacterCreationPage: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useAuthStore();
@@ -27,6 +37,14 @@ const CharacterCreationPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Voice-related state
+  const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
+  const [loadingVoices, setLoadingVoices] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState<string | null>(null);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  
   const steps = [
     'Basic Details',
     'Appearance',
@@ -35,6 +53,144 @@ const CharacterCreationPage: React.FC = () => {
     'Backstory',
     'Generate'
   ];
+
+  // Fetch ElevenLabs voices when component mounts
+  useEffect(() => {
+    const fetchVoices = async () => {
+      setLoadingVoices(true);
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-elevenlabs-voices`;
+        const headers = {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        };
+
+        const response = await fetch(apiUrl, { headers });
+        const data = await response.json();
+
+        if (data.success) {
+          setVoices(data.voices);
+        } else {
+          console.error('Failed to fetch voices:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching voices:', error);
+      } finally {
+        setLoadingVoices(false);
+      }
+    };
+
+    fetchVoices();
+  }, []);
+
+  // Clean up audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+      }
+    };
+  }, [currentAudio]);
+
+  const handlePlayPreview = async (voiceId: string, voiceName: string) => {
+    // Stop any currently playing audio
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = '';
+      setCurrentAudio(null);
+      setCurrentlyPlaying(null);
+    }
+
+    setGeneratingPreview(voiceId);
+
+    try {
+      const sampleText = characterCreationData.gender === 'male' 
+        ? "Hey there! I'm really excited to meet you. What would you like to talk about?"
+        : characterCreationData.gender === 'female'
+        ? "Hi! I'm so happy we finally get to chat. How has your day been?"
+        : "Hello! It's wonderful to connect with you. What's on your mind today?";
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-service/generate-voice-preview`;
+      const headers = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          voice_id: voiceId,
+          text: sampleText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const audioBlob = new Blob([
+          new Uint8Array(atob(data.audio_data).split('').map(c => c.charCodeAt(0)))
+        ], { type: data.content_type });
+        
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.onended = () => {
+          setCurrentlyPlaying(null);
+          setCurrentAudio(null);
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.onerror = () => {
+          console.error('Error playing audio');
+          setCurrentlyPlaying(null);
+          setCurrentAudio(null);
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        await audio.play();
+        setCurrentAudio(audio);
+        setCurrentlyPlaying(voiceId);
+        
+        // Update character creation data with selected voice
+        updateCharacterCreationData({ voice_accent: voiceName });
+        setSelectedVoiceId(voiceId);
+      } else {
+        console.error('Failed to generate voice preview:', data.error);
+      }
+    } catch (error) {
+      console.error('Error generating voice preview:', error);
+    } finally {
+      setGeneratingPreview(null);
+    }
+  };
+
+  const handleStopPreview = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = '';
+      setCurrentAudio(null);
+      setCurrentlyPlaying(null);
+    }
+  };
+
+  const getFilteredVoices = () => {
+    if (!characterCreationData.gender) return voices;
+    
+    return voices.filter(voice => {
+      const voiceGender = voice.gender.toLowerCase();
+      const characterGender = characterCreationData.gender?.toLowerCase();
+      
+      if (characterGender === 'male') {
+        return voiceGender === 'male';
+      } else if (characterGender === 'female') {
+        return voiceGender === 'female';
+      } else {
+        return true; // Show all voices for non-binary
+      }
+    });
+  };
   
   const handleNextStep = () => {
     if (step === 0) {
@@ -317,29 +473,75 @@ const CharacterCreationPage: React.FC = () => {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Voice Accent
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Choose Voice
               </label>
-              <select
-                value={characterCreationData.voice_accent || ''}
-                onChange={(e) => updateCharacterCreationData({ voice_accent: e.target.value })}
-                className="uwu-input w-full"
-              >
-                {[
-                  {value: 'calm', label: 'Calm (Korean)'},
-                  {value: 'romantic', label: 'Romantic (French)'},
-                  {value: 'playful', label: 'Playful (American)'},
-                  {value: 'soft', label: 'Soft (British)'},
-                  {value: 'energetic', label: 'Energetic (Latina)'}
-                ].map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Voice is currently text-only. Voice synthesis coming soon!
-              </p>
+              
+              {loadingVoices ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-400"></div>
+                  <span className="ml-3 text-gray-600 dark:text-gray-300">Loading voices...</span>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {getFilteredVoices().map((voice) => (
+                    <div
+                      key={voice.voice_id}
+                      className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
+                        selectedVoiceId === voice.voice_id
+                          ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                            {voice.name}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {voice.accent} • {voice.age} • {voice.description}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 ml-4">
+                          {currentlyPlaying === voice.voice_id ? (
+                            <button
+                              onClick={handleStopPreview}
+                              className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors duration-200"
+                              title="Stop preview"
+                            >
+                              <Square className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
+                              disabled={generatingPreview === voice.voice_id}
+                              className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white transition-colors duration-200"
+                              title="Play preview"
+                            >
+                              {generatingPreview === voice.voice_id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                          
+                          {selectedVoiceId === voice.voice_id && (
+                            <Volume2 className="h-4 w-4 text-pink-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {selectedVoiceId && (
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  ✓ Voice selected: {voices.find(v => v.voice_id === selectedVoiceId)?.name}
+                </p>
+              )}
             </div>
             
             <div>
@@ -428,6 +630,7 @@ const CharacterCreationPage: React.FC = () => {
                 <p><strong>Gender:</strong> {characterCreationData.gender === 'male' ? 'Boyfriend' : characterCreationData.gender === 'female' ? 'Girlfriend' : 'Non-Binary Partner'}</p>
                 <p><strong>Appearance:</strong> {characterCreationData.height} height, {characterCreationData.build} build, {characterCreationData.eye_color} eyes, {characterCreationData.hair_color} hair</p>
                 <p><strong>Personality:</strong> {selectedTraits.join(', ')}</p>
+                <p><strong>Voice:</strong> {characterCreationData.voice_accent || 'Not selected'}</p>
                 <p><strong>Style:</strong> {characterCreationData.art_style} art style</p>
                 <p><strong>How You Met:</strong> {characterCreationData.meet_cute}</p>
               </div>
