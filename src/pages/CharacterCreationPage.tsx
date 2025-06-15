@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, Sparkles, Play, Square, Volume2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Sparkles, Play, Square, Volume2, AlertCircle, Filter } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import { useCharacterStore } from '../stores/characterStore';
 import { useAuthStore } from '../stores/authStore';
@@ -28,6 +28,12 @@ interface ElevenLabsVoice {
   preview_url?: string;
 }
 
+interface VoiceFilters {
+  accent: string;
+  tone: string;
+  age: string;
+}
+
 const CharacterCreationPage: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useAuthStore();
@@ -46,6 +52,14 @@ const CharacterCreationPage: React.FC = () => {
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [voicesError, setVoicesError] = useState<string | null>(null);
   const [usingFallbackVoices, setUsingFallbackVoices] = useState(false);
+  
+  // Voice filtering state
+  const [voiceFilters, setVoiceFilters] = useState<VoiceFilters>({
+    accent: 'all',
+    tone: 'all',
+    age: 'all'
+  });
+  const [showFilters, setShowFilters] = useState(false);
   
   const steps = [
     'Basic Details',
@@ -226,13 +240,62 @@ const CharacterCreationPage: React.FC = () => {
       const voiceGender = voice.gender.toLowerCase();
       const characterGender = characterCreationData.gender?.toLowerCase();
       
+      // Filter by gender first
+      let genderMatch = true;
       if (characterGender === 'male') {
-        return voiceGender === 'male';
+        genderMatch = voiceGender === 'male';
       } else if (characterGender === 'female') {
-        return voiceGender === 'female';
-      } else {
-        return true; // Show all voices for non-binary
+        genderMatch = voiceGender === 'female';
       }
+      
+      // Apply additional filters
+      const accentMatch = voiceFilters.accent === 'all' || voice.accent.toLowerCase().includes(voiceFilters.accent.toLowerCase());
+      const ageMatch = voiceFilters.age === 'all' || voice.age.toLowerCase().includes(voiceFilters.age.toLowerCase());
+      
+      // Tone filtering based on description
+      let toneMatch = true;
+      if (voiceFilters.tone !== 'all') {
+        const description = voice.description.toLowerCase();
+        switch (voiceFilters.tone) {
+          case 'warm':
+            toneMatch = description.includes('warm') || description.includes('friendly') || description.includes('cheerful');
+            break;
+          case 'calm':
+            toneMatch = description.includes('calm') || description.includes('soothing') || description.includes('gentle');
+            break;
+          case 'confident':
+            toneMatch = description.includes('confident') || description.includes('strong') || description.includes('assertive');
+            break;
+          case 'playful':
+            toneMatch = description.includes('playful') || description.includes('energetic') || description.includes('lively');
+            break;
+          case 'mysterious':
+            toneMatch = description.includes('mysterious') || description.includes('sultry') || description.includes('deep');
+            break;
+          default:
+            toneMatch = true;
+        }
+      }
+      
+      return genderMatch && accentMatch && ageMatch && toneMatch;
+    });
+  };
+
+  const getUniqueAccents = () => {
+    const accents = voices.map(voice => voice.accent).filter(Boolean);
+    return [...new Set(accents)].sort();
+  };
+
+  const getUniqueAges = () => {
+    const ages = voices.map(voice => voice.age).filter(Boolean);
+    return [...new Set(ages)].sort();
+  };
+
+  const clearFilters = () => {
+    setVoiceFilters({
+      accent: 'all',
+      tone: 'all',
+      age: 'all'
     });
   };
   
@@ -517,9 +580,98 @@ const CharacterCreationPage: React.FC = () => {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Choose Voice
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Choose Voice
+                </label>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                    showFilters
+                      ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                </button>
+              </div>
+              
+              {/* Voice Filters */}
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Accent
+                        </label>
+                        <select
+                          value={voiceFilters.accent}
+                          onChange={(e) => setVoiceFilters(prev => ({ ...prev, accent: e.target.value }))}
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+                        >
+                          <option value="all">All Accents</option>
+                          {getUniqueAccents().map(accent => (
+                            <option key={accent} value={accent}>{accent}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Tone
+                        </label>
+                        <select
+                          value={voiceFilters.tone}
+                          onChange={(e) => setVoiceFilters(prev => ({ ...prev, tone: e.target.value }))}
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+                        >
+                          <option value="all">All Tones</option>
+                          <option value="warm">Warm & Friendly</option>
+                          <option value="calm">Calm & Soothing</option>
+                          <option value="confident">Confident & Strong</option>
+                          <option value="playful">Playful & Energetic</option>
+                          <option value="mysterious">Mysterious & Deep</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Age
+                        </label>
+                        <select
+                          value={voiceFilters.age}
+                          onChange={(e) => setVoiceFilters(prev => ({ ...prev, age: e.target.value }))}
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+                        >
+                          <option value="all">All Ages</option>
+                          {getUniqueAges().map(age => (
+                            <option key={age} value={age}>{age}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 flex justify-between items-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {getFilteredVoices().length} voices match your filters
+                      </span>
+                      <button
+                        onClick={clearFilters}
+                        className="text-xs text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 font-medium"
+                      >
+                        Clear Filters
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {voicesError && (
                 <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -538,67 +690,85 @@ const CharacterCreationPage: React.FC = () => {
                   <span className="ml-3 text-gray-600 dark:text-gray-300">Loading voices...</span>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {getFilteredVoices().map((voice) => (
-                    <div
-                      key={voice.voice_id}
-                      className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
-                        selectedVoiceId === voice.voice_id
-                          ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                            {voice.name}
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {voice.accent} • {voice.age} • {voice.description}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-4">
-                          {!usingFallbackVoices && !voice.voice_id.startsWith('fallback-') && !voice.voice_id.startsWith('basic-') ? (
-                            currentlyPlaying === voice.voice_id ? (
-                              <button
-                                onClick={handleStopPreview}
-                                className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors duration-200"
-                                title="Stop preview"
-                              >
-                                <Square className="h-4 w-4" />
-                              </button>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {getFilteredVoices().length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No voices match your current filters. Try adjusting your selection.
+                      </p>
+                    </div>
+                  ) : (
+                    getFilteredVoices().map((voice) => (
+                      <motion.div
+                        key={voice.voice_id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
+                          selectedVoiceId === voice.voice_id
+                            ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                              {voice.name}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full">
+                                {voice.accent}
+                              </span>
+                              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
+                                {voice.age}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {voice.description}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 ml-4">
+                            {!usingFallbackVoices && !voice.voice_id.startsWith('fallback-') && !voice.voice_id.startsWith('basic-') ? (
+                              currentlyPlaying === voice.voice_id ? (
+                                <button
+                                  onClick={handleStopPreview}
+                                  className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors duration-200"
+                                  title="Stop preview"
+                                >
+                                  <Square className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
+                                  disabled={generatingPreview === voice.voice_id}
+                                  className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white transition-colors duration-200"
+                                  title="Play preview"
+                                >
+                                  {generatingPreview === voice.voice_id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  ) : (
+                                    <Play className="h-4 w-4" />
+                                  )}
+                                </button>
+                              )
                             ) : (
                               <button
                                 onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
-                                disabled={generatingPreview === voice.voice_id}
-                                className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white transition-colors duration-200"
-                                title="Play preview"
+                                className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 text-white transition-colors duration-200"
+                                title="Select voice"
                               >
-                                {generatingPreview === voice.voice_id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
+                                <Volume2 className="h-4 w-4" />
                               </button>
-                            )
-                          ) : (
-                            <button
-                              onClick={() => handlePlayPreview(voice.voice_id, voice.name)}
-                              className="p-2 rounded-full bg-pink-500 hover:bg-pink-600 text-white transition-colors duration-200"
-                              title="Select voice"
-                            >
-                              <Volume2 className="h-4 w-4" />
-                            </button>
-                          )}
-                          
-                          {selectedVoiceId === voice.voice_id && (
-                            <Volume2 className="h-4 w-4 text-pink-500" />
-                          )}
+                            )}
+                            
+                            {selectedVoiceId === voice.voice_id && (
+                              <Volume2 className="h-4 w-4 text-pink-500" />
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               )}
               
