@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Plus, CreditCard, Users } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
+import CharacterCard from '../components/character/CharacterCard';
 import { useAuthStore } from '../stores/authStore';
 import { useCharacterStore } from '../stores/characterStore';
 import { supabase } from '../lib/supabase/supabaseClient';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 const DashboardPage: React.FC = () => {
   const { session } = useAuthStore();
@@ -48,7 +50,7 @@ const DashboardPage: React.FC = () => {
         
         setUserProfile(profileData);
         
-        // Fetch characters
+        // Fetch characters (only non-archived ones)
         const { data: charactersData, error: charactersError } = await supabase
           .from('characters')
           .select(`
@@ -58,12 +60,14 @@ const DashboardPage: React.FC = () => {
               love_meter
             )
           `)
-          .eq('user_id', session.user.id);
+          .eq('user_id', session.user.id)
+          .eq('is_archived', false);
         
         if (charactersError) throw charactersError;
         setCharacters(charactersData || []);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -71,6 +75,25 @@ const DashboardPage: React.FC = () => {
     
     fetchData();
   }, [session, setCharacters]);
+
+  const handleArchiveCharacter = async (characterId: string) => {
+    try {
+      const { error } = await supabase
+        .from('characters')
+        .update({ is_archived: true })
+        .eq('id', characterId)
+        .eq('user_id', session?.user?.id);
+
+      if (error) throw error;
+
+      // Remove the character from the current list
+      setCharacters(characters.filter(char => char.id !== characterId));
+      toast.success('Character archived successfully');
+    } catch (error) {
+      console.error('Error archiving character:', error);
+      toast.error('Failed to archive character');
+    }
+  };
   
   const getSubscriptionLabel = (tier: string) => {
     switch (tier) {
@@ -152,52 +175,14 @@ const DashboardPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {characters.map((character, index) => {
-                      // Get the first chat for this character
-                      const chat = character.chats && character.chats[0];
-                      const loveMeter = chat ? chat.love_meter : 0;
-                      
-                      return (
-                        <motion.div
-                          key={character.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1, duration: 0.5 }}
-                          className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden"
-                        >
-                          <div 
-                            className="h-48 bg-cover bg-center"
-                            style={{ backgroundImage: `url(${character.image_url || 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'})` }}
-                          ></div>
-                          <div className="p-5">
-                            <div className="flex justify-between items-center mb-3">
-                              <h3 className="text-xl font-bold">{character.name}</h3>
-                              <span className="text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200 px-2 py-1 rounded-full capitalize">
-                                {character.gender === 'male' ? 'Boyfriend' : character.gender === 'female' ? 'Girlfriend' : 'Partner'}
-                              </span>
-                            </div>
-                            
-                            <div className="mb-4">
-                              <div className="flex items-center mb-1">
-                                <Heart className="h-4 w-4 text-pink-500 mr-2" />
-                                <span className="text-sm font-medium">Love Meter</span>
-                                <span className="text-sm ml-auto">{loveMeter}%</span>
-                              </div>
-                              <div className="love-meter">
-                                <div className="love-meter-fill" style={{ width: `${loveMeter}%` }}></div>
-                              </div>
-                            </div>
-                            
-                            <Link
-                              to={`/chat/${chat?.id}`}
-                              className="block w-full text-center bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white py-2 px-4 rounded-full font-medium transition-all duration-200"
-                            >
-                              Chat Now
-                            </Link>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                    {characters.map((character, index) => (
+                      <CharacterCard
+                        key={character.id}
+                        character={character}
+                        index={index}
+                        onArchive={handleArchiveCharacter}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
