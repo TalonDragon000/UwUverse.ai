@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Archive } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Database } from '../../lib/supabase/database.types';
 
@@ -11,11 +11,9 @@ type Character = Database['public']['Tables']['characters']['Row'] & {
 interface CharacterCardProps {
   character: Character;
   index: number;
-  onArchive: (characterId: string) => void; // Add onArchive prop
-
 }
 
-const CharacterCard: React.FC<CharacterCardProps> = ({ character, index, onArchive }) => {
+const CharacterCard: React.FC<CharacterCardProps> = ({ character, index }) => {
   const chat = character.chats && character.chats.length > 0 ? character.chats[0] : null;
   const loveMeter = chat ? chat.love_meter : 0;
 
@@ -49,7 +47,6 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, index, onArchi
           </div>
         </div>
 
-        <div className="flex gap-2"> {/* Use a flex container for buttons */}
         {chat?.id ? (
           <Link
             to={`/chat/${chat.id}`}
@@ -65,14 +62,6 @@ const CharacterCard: React.FC<CharacterCardProps> = ({ character, index, onArchi
             Chat Not Available
           </button>
         )}
-        <button
-          onClick={() => onArchive(character.id)} // Call onArchive with character ID
-          className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
-          title="Archive Character"
-          >
-            <Archive className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-          </button>
-        </div>
       </div>
     </motion.div>
   );
