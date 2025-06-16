@@ -6,6 +6,7 @@ import { useCharacterStore } from '../stores/characterStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import CharacterSuccessModal from '../components/character/CharacterSuccessModal';
 
 const PERSONALITY_TRAITS = [
   'shy', 'flirty', 'confident', 'chaotic',
@@ -24,7 +25,7 @@ interface ElevenLabsVoice {
   gender: string;
   accent: string;
   age: string;
-  tone: string; // Enhanced with dedicated tone property
+  tone: string;
   description: string;
   preview_url?: string;
   api_version?: string;
@@ -44,6 +45,8 @@ const CharacterCreationPage: React.FC = () => {
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdCharacter, setCreatedCharacter] = useState<any>(null);
   
   // Voice-related state
   const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
@@ -255,8 +258,6 @@ const CharacterCreationPage: React.FC = () => {
       // Apply additional filters
       const accentMatch = voiceFilters.accent === 'all' || voice.accent.toLowerCase().includes(voiceFilters.accent.toLowerCase());
       const ageMatch = voiceFilters.age === 'all' || voice.age.toLowerCase().includes(voiceFilters.age.toLowerCase());
-      
-      // Enhanced tone filtering using the dedicated tone property
       const toneMatch = voiceFilters.tone === 'all' || voice.tone.toLowerCase() === voiceFilters.tone.toLowerCase();
       
       return genderMatch && accentMatch && ageMatch && toneMatch;
@@ -330,9 +331,37 @@ const CharacterCreationPage: React.FC = () => {
         personality_traits: selectedTraits
       });
       
-      // Instead of generating a real image, use a placeholder
-      // In a production app, this would call an image generation API
-      const imageUrl = `https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1`;
+      // Call the AI service to generate character image and get Tavus data
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-service/generate-character`;
+      const headers = {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: characterCreationData.name,
+          gender: characterCreationData.gender,
+          height: characterCreationData.height,
+          build: characterCreationData.build,
+          eye_color: characterCreationData.eye_color,
+          hair_color: characterCreationData.hair_color,
+          skin_tone: characterCreationData.skin_tone,
+          personality_traits: selectedTraits,
+          art_style: characterCreationData.art_style,
+        }),
+      });
+
+      const aiData = await response.json();
+      
+      if (!aiData.success) {
+        throw new Error(aiData.error || 'Failed to generate character');
+      }
+
+      // Get the selected voice data
+      const selectedVoice = voices.find(v => v.voice_id === selectedVoiceId);
       
       // Create the character in the database
       const { data: character, error: insertError } = await supabase
@@ -351,7 +380,11 @@ const CharacterCreationPage: React.FC = () => {
           art_style: characterCreationData.art_style || 'anime',
           backstory: characterCreationData.backstory || '',
           meet_cute: characterCreationData.meet_cute || 'coffee shop',
-          image_url: imageUrl
+          image_url: aiData.image_url,
+          tavus_character_id: aiData.tavus_character_id,
+          tavus_video_url: aiData.tavus_video_url,
+          voice_id: selectedVoiceId,
+          voice_name: selectedVoice?.name,
         })
         .select()
         .single();
@@ -379,17 +412,20 @@ const CharacterCreationPage: React.FC = () => {
         throw new Error(`Failed to create chat: ${chatError.message}`);
       }
 
-      // Add explicit validation for chat.id before navigation
       if (!chat?.id || typeof chat.id !== 'string') {
         throw new Error('Invalid chat ID received after creation');
       }
       
-      // Only navigate if we have a valid chat ID
-      navigate(`/chat/${chat.id}`);
+      // Show success modal
+      setCreatedCharacter({
+        ...character,
+        chat_id: chat.id
+      });
+      setShowSuccessModal(true);
+      
     } catch (error) {
       console.error('Error creating character:', error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-      // Stay on the current page if there's an error
     } finally {
       setIsGenerating(false);
     }
@@ -978,6 +1014,15 @@ const CharacterCreationPage: React.FC = () => {
           </div>
         </div>
       </main>
+      
+      {/* Success Modal */}
+      {showSuccessModal && createdCharacter && (
+        <CharacterSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          character={createdCharacter}
+        />
+      )}
     </div>
   );
 };
