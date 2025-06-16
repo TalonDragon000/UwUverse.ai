@@ -188,35 +188,45 @@ const CharacterCreationPage: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        const audioBlob = new Blob([
-          new Uint8Array(atob(data.audio_data).split('').map(c => c.charCodeAt(0)))
-        ], { type: data.content_type });
-        
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        
-        audio.onended = () => {
-          setCurrentlyPlaying(null);
-          setCurrentAudio(null);
-          URL.revokeObjectURL(audioUrl);
-        };
+        try {
+          const audioBlob = new Blob([
+            new Uint8Array(atob(data.audio_data).split('').map(c => c.charCodeAt(0)))
+          ], { type: data.content_type });
+          
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          
+          audio.onended = () => {
+            setCurrentlyPlaying(null);
+            setCurrentAudio(null);
+            URL.revokeObjectURL(audioUrl);
+          };
 
-        audio.onerror = () => {
-          console.error('Error playing audio');
-          setCurrentlyPlaying(null);
-          setCurrentAudio(null);
-          URL.revokeObjectURL(audioUrl);
-        };
+          audio.onerror = (e) => {
+            console.error('Audio playback error:', e);
+            setCurrentlyPlaying(null);
+            setCurrentAudio(null);
+            URL.revokeObjectURL(audioUrl);
+            // Just select the voice without showing an error
+            updateCharacterCreationData({ voice_accent: voiceName });
+            setSelectedVoiceId(voiceId);
+          };
 
-        await audio.play();
-        setCurrentAudio(audio);
-        setCurrentlyPlaying(voiceId);
-        
-        // Update character creation data with selected voice
-        updateCharacterCreationData({ voice_accent: voiceName });
-        setSelectedVoiceId(voiceId);
+          await audio.play();
+          setCurrentAudio(audio);
+          setCurrentlyPlaying(voiceId);
+          
+          // Update character creation data with selected voice
+          updateCharacterCreationData({ voice_accent: voiceName });
+          setSelectedVoiceId(voiceId);
+        } catch (audioError) {
+          console.error('Error creating or playing audio:', audioError);
+          // Just select the voice without preview
+          updateCharacterCreationData({ voice_accent: voiceName });
+          setSelectedVoiceId(voiceId);
+        }
       } else {
-        console.error('Failed to generate voice preview:', data.error);
+        console.log('Voice preview not available:', data.error);
         // Just select the voice without preview
         updateCharacterCreationData({ voice_accent: voiceName });
         setSelectedVoiceId(voiceId);
@@ -358,6 +368,11 @@ const CharacterCreationPage: React.FC = () => {
       
       if (!aiData.success) {
         throw new Error(aiData.error || 'Failed to generate character');
+      }
+
+      // Show a message if using fallback features
+      if (aiData.fallback && aiData.message) {
+        console.log('Using fallback features:', aiData.message);
       }
 
       // Get the selected voice data
