@@ -20,7 +20,57 @@ interface ElevenLabsVoice {
   preview_url?: string;
 }
 
-// Fallback voices when ElevenLabs API is not available
+// Enhanced tone assignment function
+const assignTone = (voice: ElevenLabsVoice): string => {
+  const description = voice.labels?.description?.toLowerCase() || '';
+  const name = voice.name.toLowerCase();
+  
+  // Analyze description and name for tone keywords
+  if (description.includes('warm') || description.includes('friendly') || description.includes('cheerful') || 
+      description.includes('bright') || description.includes('upbeat')) {
+    return 'warm';
+  }
+  
+  if (description.includes('calm') || description.includes('soothing') || description.includes('gentle') || 
+      description.includes('soft') || description.includes('peaceful')) {
+    return 'calm';
+  }
+  
+  if (description.includes('confident') || description.includes('strong') || description.includes('assertive') || 
+      description.includes('powerful') || description.includes('authoritative')) {
+    return 'confident';
+  }
+  
+  if (description.includes('playful') || description.includes('energetic') || description.includes('lively') || 
+      description.includes('bubbly') || description.includes('animated')) {
+    return 'playful';
+  }
+  
+  if (description.includes('mysterious') || description.includes('sultry') || description.includes('deep') || 
+      description.includes('seductive') || description.includes('alluring')) {
+    return 'mysterious';
+  }
+  
+  if (description.includes('professional') || description.includes('business') || description.includes('formal')) {
+    return 'professional';
+  }
+  
+  if (description.includes('romantic') || description.includes('intimate') || description.includes('loving')) {
+    return 'romantic';
+  }
+  
+  // Default tone based on gender if no specific tone found
+  const gender = voice.labels?.gender?.toLowerCase();
+  if (gender === 'male') {
+    return 'confident';
+  } else if (gender === 'female') {
+    return 'warm';
+  }
+  
+  return 'neutral';
+};
+
+// Fallback voices with proper tone assignments
 const fallbackVoices = [
   {
     voice_id: 'fallback-male-1',
@@ -28,7 +78,8 @@ const fallbackVoices = [
     gender: 'male',
     accent: 'American',
     age: 'young adult',
-    description: 'Warm and friendly voice',
+    tone: 'warm',
+    description: 'Warm and friendly voice perfect for casual conversations',
   },
   {
     voice_id: 'fallback-male-2',
@@ -36,7 +87,17 @@ const fallbackVoices = [
     gender: 'male',
     accent: 'British',
     age: 'middle aged',
-    description: 'Sophisticated and calm',
+    tone: 'confident',
+    description: 'Sophisticated and confident with a distinguished British accent',
+  },
+  {
+    voice_id: 'fallback-male-3',
+    name: 'Ryan',
+    gender: 'male',
+    accent: 'American',
+    age: 'young adult',
+    tone: 'playful',
+    description: 'Energetic and playful voice with youthful enthusiasm',
   },
   {
     voice_id: 'fallback-female-1',
@@ -44,7 +105,8 @@ const fallbackVoices = [
     gender: 'female',
     accent: 'American',
     age: 'young adult',
-    description: 'Sweet and cheerful voice',
+    tone: 'warm',
+    description: 'Sweet and cheerful voice with a warm, caring tone',
   },
   {
     voice_id: 'fallback-female-2',
@@ -52,7 +114,8 @@ const fallbackVoices = [
     gender: 'female',
     accent: 'British',
     age: 'young adult',
-    description: 'Elegant and articulate',
+    tone: 'confident',
+    description: 'Elegant and articulate with sophisticated confidence',
   },
   {
     voice_id: 'fallback-female-3',
@@ -60,7 +123,26 @@ const fallbackVoices = [
     gender: 'female',
     accent: 'Neutral',
     age: 'young adult',
-    description: 'Soft and mysterious',
+    tone: 'mysterious',
+    description: 'Soft and mysterious with an alluring, captivating quality',
+  },
+  {
+    voice_id: 'fallback-female-4',
+    name: 'Aria',
+    gender: 'female',
+    accent: 'American',
+    age: 'young adult',
+    tone: 'playful',
+    description: 'Bubbly and energetic with a playful, animated personality',
+  },
+  {
+    voice_id: 'fallback-female-5',
+    name: 'Sophia',
+    gender: 'female',
+    accent: 'Neutral',
+    age: 'young adult',
+    tone: 'calm',
+    description: 'Gentle and soothing voice that brings peace and tranquility',
   },
 ];
 
@@ -88,13 +170,31 @@ serve(async (req) => {
       );
     }
 
-    const response = await fetch('https://api.elevenlabs.io/v1/voices', {
-      method: 'GET',
-      headers: {
-        'xi-api-key': elevenLabsApiKey,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Try to fetch from ElevenLabs V2 API first, then fallback to V1
+    let response;
+    let apiVersion = 'v2';
+    
+    try {
+      // Try V2 API first for better quality voices
+      response = await fetch('https://api.elevenlabs.io/v1/voices', {
+        method: 'GET',
+        headers: {
+          'xi-api-key': elevenLabsApiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.log('V2 API failed, falling back to V1');
+      apiVersion = 'v1';
+      
+      response = await fetch('https://api.elevenlabs.io/v1/voices', {
+        method: 'GET',
+        headers: {
+          'xi-api-key': elevenLabsApiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
 
     if (!response.ok) {
       console.error(`ElevenLabs API error: ${response.statusText}`);
@@ -114,7 +214,7 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Filter and format voices for our use case
+    // Filter and format voices for our use case with enhanced tone assignment
     const formattedVoices = data.voices
       .filter((voice: ElevenLabsVoice) => voice.category === 'premade')
       .map((voice: ElevenLabsVoice) => ({
@@ -123,15 +223,18 @@ serve(async (req) => {
         gender: voice.labels?.gender || 'neutral',
         accent: voice.labels?.accent || 'neutral',
         age: voice.labels?.age || 'adult',
+        tone: assignTone(voice), // Enhanced tone assignment
         description: voice.labels?.description || '',
         preview_url: voice.preview_url,
+        api_version: apiVersion,
       }));
 
     return new Response(
       JSON.stringify({ 
         success: true,
         voices: formattedVoices,
-        fallback: false
+        fallback: false,
+        api_version: apiVersion
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -24,8 +24,10 @@ interface ElevenLabsVoice {
   gender: string;
   accent: string;
   age: string;
+  tone: string; // Enhanced with dedicated tone property
   description: string;
   preview_url?: string;
+  api_version?: string;
 }
 
 interface VoiceFilters {
@@ -108,6 +110,7 @@ const CharacterCreationPage: React.FC = () => {
             gender: 'male',
             accent: 'Neutral',
             age: 'adult',
+            tone: 'confident',
             description: 'Standard voice option',
           },
           {
@@ -116,6 +119,7 @@ const CharacterCreationPage: React.FC = () => {
             gender: 'female',
             accent: 'Neutral',
             age: 'adult',
+            tone: 'warm',
             description: 'Standard voice option',
           },
         ]);
@@ -252,30 +256,8 @@ const CharacterCreationPage: React.FC = () => {
       const accentMatch = voiceFilters.accent === 'all' || voice.accent.toLowerCase().includes(voiceFilters.accent.toLowerCase());
       const ageMatch = voiceFilters.age === 'all' || voice.age.toLowerCase().includes(voiceFilters.age.toLowerCase());
       
-      // Tone filtering based on description
-      let toneMatch = true;
-      if (voiceFilters.tone !== 'all') {
-        const description = voice.description.toLowerCase();
-        switch (voiceFilters.tone) {
-          case 'warm':
-            toneMatch = description.includes('warm') || description.includes('friendly') || description.includes('cheerful');
-            break;
-          case 'calm':
-            toneMatch = description.includes('calm') || description.includes('soothing') || description.includes('gentle');
-            break;
-          case 'confident':
-            toneMatch = description.includes('confident') || description.includes('strong') || description.includes('assertive');
-            break;
-          case 'playful':
-            toneMatch = description.includes('playful') || description.includes('energetic') || description.includes('lively');
-            break;
-          case 'mysterious':
-            toneMatch = description.includes('mysterious') || description.includes('sultry') || description.includes('deep');
-            break;
-          default:
-            toneMatch = true;
-        }
-      }
+      // Enhanced tone filtering using the dedicated tone property
+      const toneMatch = voiceFilters.tone === 'all' || voice.tone.toLowerCase() === voiceFilters.tone.toLowerCase();
       
       return genderMatch && accentMatch && ageMatch && toneMatch;
     });
@@ -289,6 +271,11 @@ const CharacterCreationPage: React.FC = () => {
   const getUniqueAges = () => {
     const ages = voices.map(voice => voice.age).filter(Boolean);
     return [...new Set(ages)].sort();
+  };
+
+  const getUniqueTones = () => {
+    const tones = voices.map(voice => voice.tone).filter(Boolean);
+    return [...new Set(tones)].sort();
   };
 
   const clearFilters = () => {
@@ -633,11 +620,11 @@ const CharacterCreationPage: React.FC = () => {
                           className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
                         >
                           <option value="all">All Tones</option>
-                          <option value="warm">Warm & Friendly</option>
-                          <option value="calm">Calm & Soothing</option>
-                          <option value="confident">Confident & Strong</option>
-                          <option value="playful">Playful & Energetic</option>
-                          <option value="mysterious">Mysterious & Deep</option>
+                          {getUniqueTones().map(tone => (
+                            <option key={tone} value={tone}>
+                              {tone.charAt(0).toUpperCase() + tone.slice(1)}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       
@@ -717,6 +704,9 @@ const CharacterCreationPage: React.FC = () => {
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full">
                                 {voice.accent}
+                              </span>
+                              <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded-full">
+                                {voice.tone}
                               </span>
                               <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
                                 {voice.age}

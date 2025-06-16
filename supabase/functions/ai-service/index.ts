@@ -54,6 +54,7 @@ serve(async (req) => {
         throw new Error('Missing ElevenLabs API key');
       }
 
+      // Use the higher quality V2 multilingual model
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
         method: 'POST',
         headers: {
@@ -62,10 +63,12 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: 'eleven_multilingual_v2', // Upgraded to V2 model
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.5,
+            stability: 0.6, // Slightly increased for better consistency
+            similarity_boost: 0.7, // Increased for better voice matching
+            style: 0.3, // Added style parameter for V2 model
+            use_speaker_boost: true, // Enhanced speaker clarity
           },
         }),
       });
@@ -81,7 +84,8 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true,
           audio_data: base64Audio,
-          content_type: 'audio/mpeg'
+          content_type: 'audio/mpeg',
+          model_used: 'eleven_multilingual_v2'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
