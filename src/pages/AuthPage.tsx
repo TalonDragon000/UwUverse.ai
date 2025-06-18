@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Mail, Lock, User } from 'lucide-react';
+import { Heart, Mail, Lock, User, CheckCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase/supabaseClient';
+import { subscribeToNewsletter } from '../lib/services/newsletter';
 import Navbar from '../components/layout/Navbar';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 type TabType = 'login' | 'signup';
 
@@ -18,6 +20,54 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+
+  // Handle email verification redirect and newsletter signup
+  useEffect(() => {
+    const handleEmailVerification = async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const type = urlParams.get('type');
+      const accessToken = urlParams.get('access_token');
+      
+      if (type === 'email_confirm' || type === 'signup') {
+        try {
+          // Get the current user after email confirmation
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user && user.email) {
+            // Subscribe to newsletter automatically
+            const result = await subscribeToNewsletter(user.email);
+            if (result.success) {
+              toast.success('Welcome! You\'ve been subscribed to our newsletter.');
+            }
+          }
+          
+          // Clear URL parameters and redirect to login
+          navigate('/auth', { replace: true });
+          toast.success('Email confirmed! You can now log in to your account.');
+        } catch (error) {
+          console.error('Error handling email verification:', error);
+          navigate('/auth', { replace: true });
+        }
+      }
+    };
+
+    handleEmailVerification();
+  }, [location.search, navigate]);
+
+  // Countdown timer for signup success
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (signupSuccess && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (signupSuccess && countdown === 0) {
+      navigate('/auth');
+    }
+    return () => clearTimeout(timer);
+  }, [signupSuccess, countdown, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +80,18 @@ const AuthPage: React.FC = () => {
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        // Handle specific error for unconfirmed email
+        if (error.message.includes('Email not confirmed') || 
+            error.message.includes('email_not_confirmed') ||
+            error.message.includes('signup_disabled')) {
+          setError('Please confirm your email address to continue logging into your account.');
+        } else {
+          setError(error.message || 'Failed to log in');
+        }
+        return;
+      }
+      
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to log in');
@@ -45,7 +106,7 @@ const AuthPage: React.FC = () => {
     setError('');
     
     try {
-      const { error: signUpError, data } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -57,28 +118,78 @@ const AuthPage: React.FC = () => {
       
       if (signUpError) throw signUpError;
       
-      // Create user profile in the database
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: data.user.id,
-            display_name: displayName,
-            ai_credits_remaining: 1000,
-            subscription_tier: 'free',
-            nsfw_enabled: false,
-          });
-        
-        if (profileError) throw profileError;
-      }
+      // Show success message instead of navigating
+      setSignupSuccess(true);
       
-      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to sign up');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleReturnToLogin = () => {
+    setSignupSuccess(false);
+    setActiveTab('login');
+    setCountdown(5); // Reset countdown
+  };
+
+  // Render signup success view
+  if (signupSuccess) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        
+        <main className="flex-grow flex items-center justify-center px-4 py-12">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-md w-full bg-white dark:bg-gray-800 rounded-3xl shadow-xl overflow-hidden"
+          >
+            <div className="p-8 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="mb-6"
+              >
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              </motion.div>
+              
+              <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-pink-400 to-lavender-400 bg-clip-text text-transparent">
+                Congratulations!
+              </h1>
+              
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Your account has been created successfully. Please check your email and confirm your email address to continue.
+              </p>
+              
+              <div className="mb-6">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  Redirecting to login in {countdown} seconds...
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-pink-400 to-lavender-400 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleReturnToLogin}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white rounded-full font-medium transition-all duration-200"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Return to Login
+              </button>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
