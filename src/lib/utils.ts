@@ -25,6 +25,7 @@ export function formatTime(date: string | Date): string {
 
 // Placeholder for a simple AI response function
 // In a real app, this would call an actual AI API
+/*
 export function generateAIResponse(
   message: string, 
   characterTraits: string[], 
@@ -64,6 +65,7 @@ export function generateAIResponse(
   
   return genericResponses[Math.floor(Math.random() * genericResponses.length)];
 }
+*/
 
 // Truncate text with ellipsis
 export function truncateText(text: string, maxLength: number): string {
