@@ -29,7 +29,7 @@ const NotFoundPage: React.FC = () => {
         }
         return prev - 1;
       });
-    }, 1000);
+    }, 3000);
 
     return () => clearInterval(timer);
   }, [navigate, session]);
