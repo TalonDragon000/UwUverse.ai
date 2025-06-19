@@ -5,6 +5,7 @@ import CharacterCreationPage from './pages/CharacterCreationPage';
 import DashboardPage from './pages/DashboardPage';
 import ChatPage from './pages/ChatPage';
 import AuthPage from './pages/AuthPage';
+import NotFoundPage from './pages/NotFoundPage';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
@@ -36,7 +37,8 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route path="*" element={<Navigate to="/\" replace />} />
+          {/* 404 Route - Must be last */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
     </ThemeProvider>
