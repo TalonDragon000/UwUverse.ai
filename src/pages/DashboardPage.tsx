@@ -16,64 +16,64 @@ const DashboardPage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!session?.user) return;
-      
-      setLoading(true);
-      try {
-        // Fetch user profile
-        let { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-        
-        // If no profile exists, create one with default values
-        if (!profileData) {
-          const defaultProfile = {
-            user_id: session.user.id,
-            display_name: session.user.email?.split('@')[0] || 'User',
-            ai_credits_remaining: 1000,
-            subscription_tier: 'free',
-            nsfw_enabled: false
-          };
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('user_profiles')
-            .insert([defaultProfile])
-            .select()
-            .single();
-            
-          if (createError) throw createError;
-          profileData = newProfile;
-        }
-        
-        setUserProfile(profileData);
-        
-        // Fetch characters (only non-archived ones)
-        const { data: charactersData, error: charactersError } = await supabase
-          .from('characters')
-          .select(`
-            *,
-            chats (
-              id,
-              love_meter
-            )
-          `)
-          .eq('user_id', session.user.id)
-          .eq('is_archived', false);
-        
-        if (charactersError) throw charactersError;
-        setCharacters(charactersData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        toast.error('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    if (!session?.user) return;
     
+    setLoading(true);
+    try {
+      // Fetch user profile
+      let { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      
+      // If no profile exists, create one with default values
+      if (!profileData) {
+        const defaultProfile = {
+          user_id: session.user.id,
+          display_name: session.user.email?.split('@')[0] || 'User',
+          ai_credits_remaining: 1000,
+          subscription_tier: 'free',
+          nsfw_enabled: false
+        };
+        
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert([defaultProfile])
+          .select()
+          .single();
+          
+        if (createError) throw createError;
+        profileData = newProfile;
+      }
+      
+      setUserProfile(profileData);
+      
+      // Fetch characters (only non-archived ones)
+      const { data: charactersData, error: charactersError } = await supabase
+        .from('characters')
+        .select(`
+          *,
+          chats (
+            id,
+            love_meter
+          )
+        `)
+        .eq('user_id', session.user.id)
+        .eq('is_archived', false);
+      
+      if (charactersError) throw charactersError;
+      setCharacters(charactersData || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [session, setCharacters]);
 
@@ -95,7 +95,7 @@ const DashboardPage: React.FC = () => {
       toast.error('Failed to archive character');
     }
   };
-  
+
   const getSubscriptionLabel = (tier: string) => {
     switch (tier) {
       case 'free':

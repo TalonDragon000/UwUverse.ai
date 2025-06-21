@@ -22,16 +22,23 @@ export const getSubscriptionPlans = async () => {
   }
 };
 
-export const purchaseSubscription = async (packageId: string) => {
+export const purchaseSubscription = async (packageIdentifier: string) => {
   try {
-    const { customerInfo } = await Purchases.purchasePackage(packageId);
+    const { customerInfo } = await Purchases.purchasePackage(packageIdentifier);
     
     // Update user profile with new subscription status
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const subscriptionTier = customerInfo.entitlements.active['pro_access'] ? 'pro' : 'free';
+      const subscriptionStatus = customerInfo.entitlements.active['pro_access'] ? 'active' : 'free';
+      const subscriptionPeriodEnd = customerInfo.latestExpirationDate 
+        ? new Date(customerInfo.latestExpirationDate).toISOString()
+        : null;
+
       await supabase.from('user_profiles').update({
-        subscription_status: customerInfo.entitlements.active['pro_access'] ? 'pro' : 'free',
-        subscription_period_end: new Date(customerInfo.latestExpirationDate).toISOString(),
+        subscription_tier: subscriptionTier,
+        subscription_status: subscriptionStatus,
+        subscription_period_end: subscriptionPeriodEnd,
       }).eq('user_id', user.id);
     }
 
@@ -45,6 +52,23 @@ export const purchaseSubscription = async (packageId: string) => {
 export const restorePurchases = async () => {
   try {
     const { customerInfo } = await Purchases.restorePurchases();
+    
+    // Update user profile with restored subscription status
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const subscriptionTier = customerInfo.entitlements.active['pro_access'] ? 'pro' : 'free';
+      const subscriptionStatus = customerInfo.entitlements.active['pro_access'] ? 'active' : 'free';
+      const subscriptionPeriodEnd = customerInfo.latestExpirationDate 
+        ? new Date(customerInfo.latestExpirationDate).toISOString()
+        : null;
+
+      await supabase.from('user_profiles').update({
+        subscription_tier: subscriptionTier,
+        subscription_status: subscriptionStatus,
+        subscription_period_end: subscriptionPeriodEnd,
+      }).eq('user_id', user.id);
+    }
+
     return customerInfo;
   } catch (error) {
     console.error('Error restoring purchases:', error);

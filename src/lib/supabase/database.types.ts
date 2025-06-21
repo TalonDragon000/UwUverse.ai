@@ -194,6 +194,8 @@ export interface Database {
           nsfw_enabled: boolean;
           current_character_limit: number;
           updated_at: string;
+          subscription_status: string | null;
+          subscription_period_end: string | null;
         };
         Insert: {
           id?: string;
@@ -205,6 +207,8 @@ export interface Database {
           nsfw_enabled?: boolean;
           current_character_limit?: number;
           updated_at?: string;
+          subscription_status?: string | null;
+          subscription_period_end?: string | null;
         };
         Update: {
           id?: string;
@@ -216,6 +220,8 @@ export interface Database {
           nsfw_enabled?: boolean;
           current_character_limit?: number;
           updated_at?: string;
+          subscription_status?: string | null;
+          subscription_period_end?: string | null;
         };
       };
       posts: {

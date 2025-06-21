@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import ChatPage from './pages/ChatPage';
 import AuthPage from './pages/AuthPage';
 import PricingPage from './pages/PricingPage';
+import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -22,6 +23,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/create" element={<CharacterCreationPage />} />
           <Route 
             path="/dashboard" 

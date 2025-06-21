@@ -1,29 +1,81 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Check, Star, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { purchaseSubscription } from '../../lib/services/revenueCat';
+import { purchaseSubscription, getSubscriptionPlans } from '../../lib/services/revenueCat';
 import { toast } from 'sonner';
 
 interface SubscriptionPlansProps {
   userSubscriptionTier?: string;
   showHeader?: boolean;
   variant?: 'default' | 'detailed';
+  onSubscriptionUpdate?: () => void;
+}
+
+interface RevenueCatPackage {
+  identifier: string;
+  packageType: string;
+  product: {
+    identifier: string;
+    description: string;
+    title: string;
+    price: string;
+    priceString: string;
+    currencyCode: string;
+  };
 }
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ 
   userSubscriptionTier = 'free',
   showHeader = true,
-  variant = 'default'
+  variant = 'default',
+  onSubscriptionUpdate
 }) => {
+  const [revenueCatPackages, setRevenueCatPackages] = useState<RevenueCatPackage[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const packages = await getSubscriptionPlans();
+        setRevenueCatPackages(packages);
+      } catch (error) {
+        console.error('Failed to fetch subscription packages:', error);
+      }
+    };
+
+    fetchPackages();
+  }, []);
+
   const handleUpgrade = async (planId: string) => {
+    setLoading(true);
     try {
-      await purchaseSubscription(planId);
+      // Find the corresponding RevenueCat package
+      const revenueCatPackage = revenueCatPackages.find(pkg => 
+        pkg.identifier.toLowerCase().includes(planId.toLowerCase()) ||
+        pkg.product.identifier.toLowerCase().includes(planId.toLowerCase())
+      );
+
+      if (!revenueCatPackage) {
+        throw new Error(`No RevenueCat package found for plan: ${planId}`);
+      }
+
+      await purchaseSubscription(revenueCatPackage.identifier);
       toast.success('Subscription upgraded successfully!');
+      
+      // Trigger subscription update callback
+      if (onSubscriptionUpdate) {
+        onSubscriptionUpdate();
+      }
     } catch (error) {
       console.error('Subscription error:', error);
       toast.error('Failed to upgrade subscription. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleContactSupport = () => {
+    window.location.href = 'mailto:support@uwuverse.ai?subject=Enterprise Plan Inquiry&body=Hi, I\'m interested in learning more about the Enterprise plan. Please contact me with more details.';
   };
 
   const plans = [
@@ -103,7 +155,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {plans.map((plan, index) => {
           const isCurrentPlan = userSubscriptionTier === plan.id;
-          const isDisabled = plan.buttonVariant === 'disabled' || isCurrentPlan;
+          const isDisabled = plan.buttonVariant === 'disabled' || isCurrentPlan || loading;
 
           return (
             <motion.div
@@ -160,12 +212,12 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
 
               <div className="mt-auto">
                 {plan.id === 'enterprise' ? (
-                  <Link
-                    to="/contact"
-                    className="w-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-full font-medium transition-all duration-200 text-center block"
+                  <button
+                    onClick={handleContactSupport}
+                    className="w-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-full font-medium transition-all duration-200 text-center"
                   >
                     {plan.buttonText}
-                  </Link>
+                  </button>
                 ) : (
                   <button
                     onClick={() => !isDisabled && handleUpgrade(plan.id)}
@@ -174,11 +226,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                       isCurrentPlan
                         ? 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-default'
                         : plan.popular
-                        ? 'bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white transform hover:scale-105'
-                        : 'bg-pink-400 hover:bg-pink-500 dark:bg-pink-600 dark:hover:bg-pink-500 text-white'
+                        ? 'bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
+                        : 'bg-pink-400 hover:bg-pink-500 dark:bg-pink-600 dark:hover:bg-pink-500 text-white disabled:opacity-50 disabled:cursor-not-allowed'
                     }`}
                   >
-                    {isCurrentPlan ? 'Current Plan' : plan.buttonText}
+                    {loading ? 'Processing...' : isCurrentPlan ? 'Current Plan' : plan.buttonText}
                   </button>
                 )}
               </div>
@@ -194,12 +246,12 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
               Not sure which plan is right for you? Our team is here to help you find the perfect fit for your AI companion needs.
             </p>
-            <Link
-              to="/contact"
+            <button
+              onClick={handleContactSupport}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white rounded-full font-medium transition-all duration-200"
             >
               Contact Support
-            </Link>
+            </button>
           </div>
         </div>
       )}

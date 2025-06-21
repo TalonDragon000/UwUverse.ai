@@ -1,13 +1,60 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import SubscriptionPlans from '../components/subscription/SubscriptionPlans';
 import NewsletterSignup from '../components/marketing/NewsletterSignup';
 import { useAuthStore } from '../stores/authStore';
+import { supabase } from '../lib/supabase/supabaseClient';
 import { motion } from 'framer-motion';
 import { Heart, Zap, Shield, Users } from 'lucide-react';
 
 const PricingPage: React.FC = () => {
   const { session } = useAuthStore();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!session?.user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const { data: profileData, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        setUserProfile(profileData);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session]);
+
+  const handleSubscriptionUpdate = async () => {
+    // Refetch user profile after subscription update
+    if (session?.user) {
+      try {
+        const { data: profileData, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        setUserProfile(profileData);
+      } catch (error) {
+        console.error('Error refetching user profile:', error);
+      }
+    }
+  };
 
   const benefits = [
     {
@@ -54,6 +101,17 @@ const PricingPage: React.FC = () => {
       answer: "Absolutely. You can cancel your subscription at any time from your account settings. You'll continue to have access until the end of your billing period."
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400"></div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -116,9 +174,10 @@ const PricingPage: React.FC = () => {
         <section className="py-16 px-4">
           <div className="max-w-7xl mx-auto">
             <SubscriptionPlans 
-              userSubscriptionTier={session ? 'free' : undefined}
+              userSubscriptionTier={userProfile?.subscription_tier || (session ? 'free' : undefined)}
               showHeader={false}
               variant="detailed"
+              onSubscriptionUpdate={handleSubscriptionUpdate}
             />
           </div>
         </section>
