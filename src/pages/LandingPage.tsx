@@ -141,7 +141,7 @@ const LandingPage: React.FC = () => {
             {/* Bolt Logo on its own line */}
             <div>
               <a href="https://www.bolt.new" target="_blank" rel="noopener noreferrer">
-                <img src="/bolt-white-360.png" alt="Bolt Logo" width="50" className="mx-auto" />
+                <img src="/bolt-white-360.png" alt="Bolt Logo" width="100" className="mx-auto" />
               </a>
             </div>
             
@@ -159,6 +159,7 @@ const LandingPage: React.FC = () => {
                 © 2025 UwUverse.ai - All rights reserved
               </p>
             </div>
+            
           </div>
         </div>
       </footer>
