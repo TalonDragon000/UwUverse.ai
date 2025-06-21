@@ -137,12 +137,23 @@ const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md py-8 border-t border-pink-200 dark:border-pink-800">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="items-center justify-center mb-4">
-            <div><a href="https://www.bolt.new"><img src="bolt-white-360.png" alt="Bolt Logo" width="50"></img></a></div>
-            <div classname="flex items-center justify-center mb-4">
-              <UwuIcon size={24} />
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">UwUverse.ai</span>
+          <div className="space-y-4">
+            {/* Bolt Logo on its own line */}
+            <div>
+              <a href="https://www.bolt.new" target="_blank" rel="noopener noreferrer">
+                <img src="/bolt-white-360.png" alt="Bolt Logo" width="50" className="mx-auto" />
+              </a>
             </div>
+            
+            {/* UwUverse.ai branding on its own line */}
+            <div className="flex items-center justify-center">
+              <UwuIcon size={24} />
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+                UwUverse.ai
+              </span>
+            </div>
+            
+            {/* Copyright text on its own line */}
             <div>
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 © 2025 UwUverse.ai - All rights reserved
