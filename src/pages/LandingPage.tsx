@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Sparkles, MessageCircleHeart } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import NewsletterSignup from '../components/marketing/NewsletterSignup';
+import UwuIcon from '../components/UwuIcon';
 import { motion } from 'framer-motion';
 
 const LandingPage: React.FC = () => {
@@ -137,7 +138,7 @@ const LandingPage: React.FC = () => {
       <footer className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md py-8 border-t border-pink-200 dark:border-pink-800">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center mb-4">
-            <Heart className="h-6 w-6 text-pink-400" />
+            <UwuIcon size={24} />
             <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
               UwUverse.ai
             </span>

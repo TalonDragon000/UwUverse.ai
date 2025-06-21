@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Mail, Lock, User, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, CheckCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase/supabaseClient';
 import { subscribeToNewsletter } from '../lib/services/newsletter';
 import Navbar from '../components/layout/Navbar';
+import UwuIcon from '../components/UwuIcon';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -204,7 +205,7 @@ const AuthPage: React.FC = () => {
         >
           <div className="p-8">
             <div className="text-center mb-8">
-              <Heart className="h-12 w-12 text-pink-400 mx-auto mb-2 animate-heartbeat" />
+              <UwuIcon size={48} className="mx-auto mb-2 animate-heartbeat" />
               <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-lavender-400 bg-clip-text text-transparent">
                 {activeTab === 'login' ? 'Welcome Back' : 'Join UwUverse.ai'}
               </h1>

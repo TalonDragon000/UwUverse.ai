@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Menu, Moon, Sun, User, X, ExternalLink } from 'lucide-react';
+import { Menu, Moon, Sun, User, X, ExternalLink } from 'lucide-react';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase/supabaseClient';
+import UwuIcon from '../UwuIcon';
 
 const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -22,7 +23,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center">
-              <Heart className="h-8 w-8 text-pink-400 animate-heartbeat" />
+              <UwuIcon size={32} className="animate-heartbeat" />
               <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
                 UwUverse.ai
               </span>
