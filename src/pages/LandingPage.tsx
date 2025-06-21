@@ -138,8 +138,10 @@ const LandingPage: React.FC = () => {
       <footer className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md py-8 border-t border-pink-200 dark:border-pink-800">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center mb-4">
-            <a href="https://www.bolt.new"><img src="bolt-white-360.png" alt="Bolt Logo" width="50"></img></a>
-            <UwuIcon size={24} />
+            <p>
+              <a href="https://www.bolt.new"><img src="bolt-white-360.png" alt="Bolt Logo" width="50"></img></a>
+            </p>
+              <UwuIcon size={24} />
             <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
               UwUverse.ai
             </span>
