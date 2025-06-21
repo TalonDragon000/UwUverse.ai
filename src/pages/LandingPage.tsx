@@ -5,7 +5,6 @@ import Navbar from '../components/layout/Navbar';
 import NewsletterSignup from '../components/marketing/NewsletterSignup';
 import UwuIcon from '../components/UwuIcon';
 import { motion } from 'framer-motion';
-import { bolt-white-360.png } from '../public';
 
 const LandingPage: React.FC = () => {
   return (
@@ -140,7 +139,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center mb-4">
             <div>
-              <a href="www.bolt.new"><img src="bolt-white-360.png"</a>
+              <a href="https://www.bolt.new"><img classname="h-6 mr-2" src="bolt-white-360.png" alt="Bolt Logo"></a>
             </div>
             <UwuIcon size={24} />
             <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
