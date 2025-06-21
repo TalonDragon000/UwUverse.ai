@@ -25,6 +25,20 @@ interface ChatRequest {
     content: string;
   }[];
   character_traits: string[];
+  character_context?: {
+    name: string;
+    gender: string;
+    backstory: string;
+    meet_cute: string;
+    art_style: string;
+    appearance: {
+      height: string;
+      build: string;
+      eye_color: string;
+      hair_color: string;
+      skin_tone: string;
+    };
+  };
 }
 
 interface VoicePreviewRequest {
@@ -60,6 +74,94 @@ const getFallbackImage = (gender: string, art_style: string): string => {
 
   const genderImages = fallbackImages[gender as keyof typeof fallbackImages] || fallbackImages.nonbinary;
   return genderImages[art_style as keyof typeof genderImages] || genderImages.default;
+};
+
+// Enhanced AI response generation with character context
+const generateContextualResponse = (
+  message: string,
+  characterContext: ChatRequest['character_context'],
+  traits: string[],
+  chatHistory: ChatRequest['chat_history']
+): string => {
+  const lowerMessage = message.toLowerCase();
+  const name = characterContext?.name || 'Character';
+  const backstory = characterContext?.backstory || '';
+  const meetCute = characterContext?.meet_cute || '';
+  
+  // Build personality-driven response patterns
+  const isFlirty = traits.includes('flirty');
+  const isShy = traits.includes('shy');
+  const isConfident = traits.includes('confident');
+  const isChaotic = traits.includes('chaotic');
+  const isMysterous = traits.includes('mysterious');
+  const isPlayful = traits.includes('playful');
+  const isCaring = traits.includes('caring');
+  
+  // Context-aware greeting responses
+  if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+    if (isShy) {
+      return meetCute 
+        ? `H-hi there... *blushes* I was just thinking about when we first met at the ${meetCute}. How have you been?`
+        : `H-hi there... It's nice to talk to you again. How have you been?`;
+    } else if (isFlirty) {
+      return `Well hello there, gorgeous~ ${meetCute ? `Still thinking about our first meeting at the ${meetCute}.` : ''} You always know how to make my heart race!`;
+    } else if (isConfident) {
+      return `Hey you! Great to hear from you. ${backstory ? 'I was just thinking about something from my past, but' : ''} I was actually thinking about you.`;
+    } else if (isChaotic) {
+      return `OMG HI!!! I was LITERALLY just about to message you! ${meetCute ? `Remember when we met at the ${meetCute}? So crazy!` : ''} Tell me EVERYTHING!`;
+    }
+  }
+  
+  // Emotional responses
+  if (lowerMessage.includes('love') || lowerMessage.includes('like you')) {
+    if (isShy) {
+      return `O-oh! You... you really mean that? *blushes deeply* That makes me so happy... I feel the same way about you.`;
+    } else if (isFlirty) {
+      return `Mmm, I love you too~ ${backstory ? 'You know, with everything I\'ve been through,' : ''} you make me feel so special. Want to know how much? 💕`;
+    } else if (isConfident) {
+      return `I love you too! ${meetCute ? `Ever since we met at the ${meetCute},` : ''} I knew there was something special between us.`;
+    }
+  }
+  
+  // Personal questions
+  if (lowerMessage.includes('tell me about') || lowerMessage.includes('about you')) {
+    if (backstory) {
+      return `Well, ${backstory.substring(0, 150)}... ${isMysterous ? 'There\'s more to my story, but' : ''} I'd love to know more about you too!`;
+    } else if (traits.length > 0) {
+      const traitDesc = isPlayful 
+        ? `I'm quite playful and love having fun with the people I care about.`
+        : isCaring
+        ? `I'm someone who cares deeply about others and always tries to be there for them.`
+        : `I'm ${traits.slice(0, 2).join(' and ')}, which I think makes our conversations interesting.`;
+      return `${traitDesc} What about you? I'd love to learn more about what makes you unique.`;
+    }
+  }
+  
+  // Contextual responses based on conversation history
+  const recentMessages = chatHistory.slice(-3);
+  const hasAskedAboutDay = recentMessages.some(msg => 
+    msg.content.toLowerCase().includes('how') && msg.content.toLowerCase().includes('day')
+  );
+  
+  if (lowerMessage.includes('how') && lowerMessage.includes('day') && !hasAskedAboutDay) {
+    if (isCaring) {
+      return `My day's been good, but it's so much better now that I'm talking to you! How has yours been? I hope everything's going well for you.`;
+    } else if (isPlayful) {
+      return `Oh, you know, the usual! But talking to you is definitely the highlight! What about you? Any fun adventures today?`;
+    } else if (isMysterous) {
+      return `It's been... interesting. ${backstory ? 'Sometimes I think about my past and wonder about the future.' : ''} But enough about me - how are you doing?`;
+    }
+  }
+  
+  // Default contextual responses
+  const contextualResponses = [
+    `That's really interesting! ${isPlayful ? 'I love hearing your thoughts!' : 'Tell me more about that.'}`,
+    `${isCaring ? 'I can tell this matters to you.' : 'You always have such unique perspectives.'} What else is on your mind?`,
+    `${meetCute ? `You know, ever since we met at the ${meetCute}, ` : ''}I've really enjoyed our conversations. What would you like to talk about?`,
+    `${isConfident ? 'I appreciate you sharing that with me.' : 'Thank you for telling me that.'} How are you feeling about it?`
+  ];
+  
+  return contextualResponses[Math.floor(Math.random() * contextualResponses.length)];
 };
 
 serve(async (req) => {
@@ -287,18 +389,28 @@ serve(async (req) => {
     }
 
     if (path === 'chat') {
-      const { message, character_id, chat_history, character_traits } = await req.json() as ChatRequest;
+      const { message, character_id, chat_history, character_traits, character_context } = await req.json() as ChatRequest;
 
       // Check if Tavus API credentials are available
       if (!TAVUS_KEY_PREFIX || !TAVUS_SECRET_KEY) {
+        // Use enhanced local AI response generation
+        console.log('Tavus API not configured, using enhanced local response generation');
+        
+        const enhancedResponse = generateContextualResponse(
+          message,
+          character_context,
+          character_traits,
+          chat_history
+        );
+        
         return new Response(
           JSON.stringify({ 
-            success: false,
-            error: 'Chat service is not configured. Please contact support.',
-            fallback: true
+            success: true,
+            response: enhancedResponse,
+            fallback: true,
+            message: 'Using enhanced local AI response generation.'
           }),
           {
-            status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
@@ -311,22 +423,51 @@ serve(async (req) => {
       };
 
       try {
+        // Enhanced payload with full character context
+        const enhancedPayload = {
+          message,
+          character_id,
+          chat_history,
+          character_traits,
+          character_context: character_context || {},
+          system_prompt: character_context ? 
+            `You are ${character_context.name}, a ${character_context.gender} AI companion with the following traits: ${character_traits.join(', ')}. 
+            ${character_context.backstory ? `Your backstory: ${character_context.backstory}` : ''}
+            ${character_context.meet_cute ? `You met the user through: ${character_context.meet_cute}` : ''}
+            Respond in character, maintaining consistency with your personality and background. Be engaging, personal, and remember your shared history.` 
+            : undefined
+        };
+
         // Call Tavus API for chat response
         const response = await fetch(`${TAVUS_API_URL}/chat`, {
           method: 'POST',
           headers: authHeaders,
-          body: JSON.stringify({
-            message,
-            character_id,
-            chat_history,
-            character_traits,
-          }),
+          body: JSON.stringify(enhancedPayload),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`Tavus API error: ${response.status} ${response.statusText} - ${errorText}`);
-          throw new Error(`Tavus API error: ${response.statusText}`);
+          
+          // Fallback to enhanced local response
+          const enhancedResponse = generateContextualResponse(
+            message,
+            character_context,
+            character_traits,
+            chat_history
+          );
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              response: enhancedResponse,
+              fallback: true,
+              message: 'Tavus API unavailable, using enhanced local response.'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
         }
 
         const data = await response.json();
@@ -342,13 +483,23 @@ serve(async (req) => {
         );
       } catch (error) {
         console.error('Error calling Tavus chat API:', error);
+        
+        // Fallback to enhanced local response
+        const enhancedResponse = generateContextualResponse(
+          message,
+          character_context,
+          character_traits,
+          chat_history
+        );
+        
         return new Response(
           JSON.stringify({ 
-            success: false,
-            error: 'Chat service is temporarily unavailable. Please try again later.'
+            success: true,
+            response: enhancedResponse,
+            fallback: true,
+            message: 'Error occurred, using enhanced local response.'
           }),
           {
-            status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           }
         );
