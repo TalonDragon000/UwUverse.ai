@@ -174,7 +174,7 @@ const ChatPage: React.FC = () => {
           aiResponse = aiData.response;
         } else {
           // Fallback to simple response system if AI service fails
-          aiResponse = generateFallbackResponse(userMessage, character.personality_traits || []);
+          aiResponse = generateFallbackResponse(userMessage, character.personality_traits || "Sorry? I don't understand.");
         }
 
         // Insert AI response
