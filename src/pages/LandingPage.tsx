@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Sparkles, MessageCircleHeart } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
+import NewsletterSignup from '../components/marketing/NewsletterSignup';
 import { motion } from 'framer-motion';
 
 const LandingPage: React.FC = () => {
@@ -121,6 +122,13 @@ const LandingPage: React.FC = () => {
                 Create Your AI Crush
               </Link>
             </motion.div>
+          </div>
+        </section>
+
+        {/* Newsletter Section */}
+        <section className="py-16 px-4">
+          <div className="max-w-4xl mx-auto">
+            <NewsletterSignup />
           </div>
         </section>
       </main>

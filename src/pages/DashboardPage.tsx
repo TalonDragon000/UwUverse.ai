@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Plus, CreditCard, Users } from 'lucide-react';
+import { Heart, Plus, CreditCard, Users, Info } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import CharacterCard from '../components/character/CharacterCard';
+import NewsletterSignup from '../components/marketing/NewsletterSignup';
 import { useAuthStore } from '../stores/authStore';
 import { useCharacterStore } from '../stores/characterStore';
 import { supabase } from '../lib/supabase/supabaseClient';
@@ -136,9 +137,14 @@ const DashboardPage: React.FC = () => {
                       </p>
                       <div className="flex items-center">
                         <CreditCard className="h-5 w-5 text-lavender-400 mr-2" />
-                        <span className="text-sm font-medium bg-lavender-100 dark:bg-lavender-900/30 text-lavender-800 dark:text-lavender-200 px-3 py-1 rounded-full">
+                        <Link 
+                          to="/pricing"
+                          className="group flex items-center text-sm font-medium bg-lavender-100 dark:bg-lavender-900/30 text-lavender-800 dark:text-lavender-200 px-3 py-1 rounded-full hover:bg-lavender-200 dark:hover:bg-lavender-900/50 transition-colors duration-200"
+                          title="Click for more subscription information"
+                        >
                           {getSubscriptionLabel(userProfile?.subscription_tier || 'free')}
-                        </span>
+                          <Info className="h-4 w-4 ml-1 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+                        </Link>
                       </div>
                     </div>
                     <div className="mt-4 md:mt-0">
@@ -187,144 +193,9 @@ const DashboardPage: React.FC = () => {
                 )}
               </div>
               
-              {/* Subscription Info */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Subscription Plans</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Free Plan */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-2 border-transparent transition-all duration-200 hover:border-pink-200 dark:hover:border-pink-800">
-                    <h3 className="text-xl font-bold mb-2">Free</h3>
-                    <p className="text-3xl font-bold mb-4">
-                      $0 <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">/month</span>
-                    </p>
-                    <ul className="mb-6 space-y-2">
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>1,000 AI credits/month</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Max 3 AI characters</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Basic chat features</span>
-                      </li>
-                    </ul>
-                    <button 
-                      className={`w-full py-2 px-4 rounded-full font-medium transition-all duration-200 ${
-                        userProfile?.subscription_tier === 'free'
-                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-default'
-                          : 'bg-pink-400 hover:bg-pink-500 dark:bg-pink-600 dark:hover:bg-pink-500 text-white'
-                      }`}
-                      disabled={userProfile?.subscription_tier === 'free'}
-                    >
-                      {userProfile?.subscription_tier === 'free' ? 'Current Plan' : 'Select Plan'}
-                    </button>
-                  </div>
-                  
-                  {/* Pro Plan */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-2 border-pink-300 dark:border-pink-700 relative">
-                    <div className="absolute top-0 right-0 bg-pink-400 text-white px-3 py-1 text-xs font-medium rounded-bl-lg rounded-tr-lg">
-                      Popular
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">Pro</h3>
-                    <p className="text-3xl font-bold mb-4">
-                      $9.99 <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">/month</span>
-                    </p>
-                    <ul className="mb-6 space-y-2">
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>10,000 AI credits/month</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Up to 5 characters</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Premium chat features</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Deeper memory & emotions</span>
-                      </li>
-                    </ul>
-                    <button 
-                      className={`w-full py-2 px-4 rounded-full font-medium transition-all duration-200 ${
-                        userProfile?.subscription_tier === 'pro'
-                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-default'
-                          : 'bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white'
-                      }`}
-                      disabled={userProfile?.subscription_tier === 'pro'}
-                    >
-                      {userProfile?.subscription_tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro'}
-                    </button>
-                  </div>
-                  
-                  {/* Enterprise Plan */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-2 border-transparent transition-all duration-200 hover:border-pink-200 dark:hover:border-pink-800">
-                    <h3 className="text-xl font-bold mb-2">Enterprise</h3>
-                    <p className="text-3xl font-bold mb-4">
-                      Custom <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">/month</span>
-                    </p>
-                    <ul className="mb-6 space-y-2">
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Unlimited AI credits</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Unlimited characters</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Premium features + priority access</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
-                        <span>Dedicated support</span>
-                      </li>
-                    </ul>
-                    <button 
-                      className="w-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-full font-medium transition-all duration-200"
-                    >
-                      Contact Us
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
               {/* Newsletter Signup */}
               <div className="mb-8">
-                <div className="bg-gradient-to-r from-pink-100 to-lavender-100 dark:from-pink-900/30 dark:to-lavender-900/30 rounded-2xl shadow-md p-6 md:p-8">
-                  <div className="md:flex md:items-center">
-                    <div className="md:flex-1 mb-6 md:mb-0 md:mr-8">
-                      <h3 className="text-xl md:text-2xl font-bold mb-2">Stay Updated!</h3>
-                      <p className="text-gray-700 dark:text-gray-300">
-                        Subscribe to our newsletter for updates on new features, art styles, and AI improvements.
-                      </p>
-                    </div>
-                    <div className="md:w-96">
-                      <form className="flex">
-                        <input
-                          type="email"
-                          placeholder="Your email address"
-                          className="flex-grow uwu-input rounded-r-none"
-                        />
-                        <button
-                          type="submit"
-                          className="bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white font-medium py-2 px-4 rounded-r-lg transition-all duration-200"
-                        >
-                          Subscribe
-                        </button>
-                      </form>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        We'll never share your email with third parties.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <NewsletterSignup />
               </div>
             </>
           )}

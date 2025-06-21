@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Menu, Moon, Sun, User, X } from 'lucide-react';
+import { Heart, Menu, Moon, Sun, User, X, ExternalLink } from 'lucide-react';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase/supabaseClient';
@@ -30,6 +30,27 @@ const Navbar: React.FC = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
+            <Link
+              to="/pricing"
+              className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                location.pathname === '/pricing'
+                  ? 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              Pricing
+            </Link>
+            
+            <a
+              href="https://uwuverse.beehive.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center px-4 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+            >
+              Blog
+              <ExternalLink className="h-4 w-4 ml-1" />
+            </a>
+            
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
@@ -99,6 +120,25 @@ const Navbar: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-800 shadow-lg">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            <Link
+              to="/pricing"
+              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Pricing
+            </Link>
+            
+            <a
+              href="https://uwuverse.beehive.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Blog
+              <ExternalLink className="h-4 w-4 ml-1" />
+            </a>
+            
             <button
               onClick={toggleTheme}
               className="flex items-center w-full px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
