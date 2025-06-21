@@ -43,7 +43,7 @@ const Navbar: React.FC = () => {
             </Link>
             
             <a
-              href="https://uwuverse.beehive.com"
+              href="https://uwuverse.beehiiv.com"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center px-4 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
