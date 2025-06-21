@@ -139,7 +139,7 @@ const ChatPage: React.FC = () => {
       setIsTyping(true);
       
       // Wait a realistic amount of time (1.5-3 seconds)
-      const typingDelay = Math.floor(Math.random() * 1500) + 1500;
+      const typingDelay = Math.floor(Math.random() * 100) + 1500;
       await new Promise(resolve => setTimeout(resolve, typingDelay));
       
       // Call AI service for character response
