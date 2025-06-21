@@ -143,9 +143,8 @@ const LandingPage: React.FC = () => {
               <a href="https://www.bolt.new"><img src="bolt-white-360.png" alt="Bolt Logo" width="50"></img></a>
               </span>
               </div>
-            <UwuIcon size={24} />
             <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-              UwUverse.ai
+              <UwuIcon size={24} /> UwUverse.ai
             </span>
           </div>
           <p className="text-gray-600 dark:text-gray-300 text-sm">
