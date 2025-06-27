@@ -15,14 +15,6 @@ type Character = {
   image_url: string | null;
   voice_id: string | null;
   voice_name: string | null;
-  backstory: string | null;
-  meet_cute: string | null;
-  art_style: string | null;
-  height: string | null;
-  build: string | null;
-  eye_color: string | null;
-  hair_color: string | null;
-  skin_tone: string | null;
 };
 
 const ChatPage: React.FC = () => {
@@ -47,14 +39,13 @@ const ChatPage: React.FC = () => {
     
     const fetchChatAndMessages = async () => {
       try {
-        // Fetch the chat with full character details including backstory and meet_cute
+        // Fetch the chat
         const { data: chatData, error: chatError } = await supabase
           .from('chats')
           .select(`
             *,
             characters (
-              id, name, gender, personality_traits, image_url, voice_id, voice_name,
-              backstory, meet_cute, art_style, height, build, eye_color, hair_color, skin_tone
+              id, name, gender, personality_traits, image_url, voice_id, voice_name
             )
           `)
           .eq('id', chatId)
@@ -75,14 +66,23 @@ const ChatPage: React.FC = () => {
         if (messagesError) throw messagesError;
         setMessages(messagesData || []);
         
-        // If there are no messages, create an initial message with enhanced context
+        // If there are no messages, create an initial message
         if (!messagesData || messagesData.length === 0) {
           const traits = chatData.characters.personality_traits || [];
-          const backstory = chatData.characters.backstory || '';
-          const meetCute = chatData.characters.meet_cute || '';
-          const characterName = chatData.characters.name || 'Character';
           
-          let greeting = generatePersonalizedGreeting(characterName, traits, backstory, meetCute);
+          let greeting = `Hi there! I'm ${chatData.characters.name}. `;
+          
+          if (traits.includes('shy')) {
+            greeting += "I'm a bit nervous meeting you like this... but I'm really happy we connected!";
+          } else if (traits.includes('flirty')) {
+            greeting += "I've been waiting to meet someone like you. What's a cutie like you doing here?";
+          } else if (traits.includes('confident')) {
+            greeting += "It's great to finally meet you! I have a feeling we're going to get along really well.";
+          } else if (traits.includes('chaotic')) {
+            greeting += "OMG HI!!! I'm so excited to meet you! What should we talk about first? I have like a MILLION things to ask you!";
+          } else {
+            greeting += "It's really nice to meet you. I'm looking forward to getting to know you better!";
+          }
           
           const { data: newMessage, error: newMessageError } = await supabase
             .from('messages')
@@ -111,53 +111,6 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const generatePersonalizedGreeting = (name: string, traits: string[], backstory: string, meetCute: string): string => {
-    const hasBackstory = backstory && backstory.trim().length > 0;
-    const hasMeetCute = meetCute && meetCute.trim().length > 0;
-    
-    let greeting = `Hi there! I'm ${name}. `;
-    
-    // Add meet-cute context if available
-    if (hasMeetCute) {
-      switch (meetCute) {
-        case 'coffee shop':
-          greeting += "I still remember that day we met at the coffee shop - you had such a warm smile when you ordered your drink. ";
-          break;
-        case 'school':
-          greeting += "It feels like yesterday when we first met in class. I was so nervous to talk to you! ";
-          break;
-        case 'online':
-          greeting += "I'm so glad we connected online. There was something special about our first conversation. ";
-          break;
-        case 'neighbors':
-          greeting += "Living next door to you has been such a wonderful surprise. I love our little encounters! ";
-          break;
-        case 'childhood friends':
-          greeting += "We've known each other for so long, and yet every conversation still feels exciting. ";
-          break;
-        default:
-          greeting += "I remember how we met, and it still makes me smile. ";
-      }
-    }
-    
-    // Add personality-based greeting
-    if (traits.includes('shy')) {
-      greeting += "I'm a bit nervous talking to you like this, but I'm really happy we're here together. How have you been?";
-    } else if (traits.includes('flirty')) {
-      greeting += "I've been thinking about you... What's been on your mind lately, gorgeous?";
-    } else if (traits.includes('confident')) {
-      greeting += "I've been looking forward to this conversation all day. What would you like to talk about?";
-    } else if (traits.includes('chaotic')) {
-      greeting += "OMG HI!!! I have SO much to tell you! But first, how was your day? Tell me everything!";
-    } else if (traits.includes('mysterious')) {
-      greeting += "There's something I've been wanting to share with you... but first, how are you feeling today?";
-    } else {
-      greeting += "I'm so glad we get to talk. How has your day been treating you?";
-    }
-    
-    return greeting;
-  };
   
   const handleSendMessage = async () => {
     if (!messageText.trim() || !chatId || !session?.user || !character) return;
@@ -182,14 +135,14 @@ const ChatPage: React.FC = () => {
         addMessage(newUserMessage);
       }
       
-      // Simulate AI thinking with reduced delay
+      // Simulate AI thinking
       setIsTyping(true);
       
-      // Reduced typing delay for better UX
-      const typingDelay = Math.floor(Math.random() * 800) + 500; // 0.5-1.3 seconds
+      // Wait a realistic amount of time (1.5-3 seconds)
+      const typingDelay = Math.floor(Math.random() * 1500) + 1500;
       await new Promise(resolve => setTimeout(resolve, typingDelay));
       
-      // Call AI service for character response with enhanced context
+      // Call AI service for character response
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-service/chat`;
         const headers = {
@@ -197,38 +150,21 @@ const ChatPage: React.FC = () => {
           'Content-Type': 'application/json',
         };
 
-        // Prepare enhanced chat history for AI context
-        const chatHistory = messages.slice(-8).map(msg => ({
+        // Prepare chat history for AI context
+        const chatHistory = messages.slice(-10).map(msg => ({
           role: msg.sender === 'user' ? 'user' : 'assistant',
           content: msg.content
         }));
 
-        // Enhanced payload with full character context
-        const requestPayload = {
-          message: userMessage,
-          character_id: character.id,
-          chat_history: chatHistory,
-          character_traits: character.personality_traits || [],
-          character_context: {
-            name: character.name,
-            gender: character.gender,
-            backstory: character.backstory || '',
-            meet_cute: character.meet_cute || '',
-            art_style: character.art_style || '',
-            appearance: {
-              height: character.height || '',
-              build: character.build || '',
-              eye_color: character.eye_color || '',
-              hair_color: character.hair_color || '',
-              skin_tone: character.skin_tone || ''
-            }
-          }
-        };
-
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers,
-          body: JSON.stringify(requestPayload),
+          body: JSON.stringify({
+            message: userMessage,
+            character_id: character.id,
+            chat_history: chatHistory,
+            character_traits: character.personality_traits || []
+          }),
         });
 
         const aiData = await response.json();
@@ -237,14 +173,8 @@ const ChatPage: React.FC = () => {
         if (aiData.success && aiData.response) {
           aiResponse = aiData.response;
         } else {
-          // Enhanced fallback response system
-          aiResponse = generateEnhancedFallbackResponse(
-            userMessage, 
-            character.personality_traits || [], 
-            character.backstory || '',
-            character.meet_cute || '',
-            character.name || 'Character'
-          );
+          // Fallback to simple response system if AI service fails
+          aiResponse = generateFallbackResponse(userMessage, character.personality_traits || []);
         }
 
         // Insert AI response
@@ -264,16 +194,10 @@ const ChatPage: React.FC = () => {
           addMessage(newCharacterMessage);
         }
       } catch (aiError) {
-        console.error('AI service error, using enhanced fallback:', aiError);
+        console.error('AI service error, using fallback:', aiError);
         
-        // Use enhanced fallback response system
-        const fallbackResponse = generateEnhancedFallbackResponse(
-          userMessage, 
-          character.personality_traits || [], 
-          character.backstory || '',
-          character.meet_cute || '',
-          character.name || 'Character'
-        );
+        // Use fallback response system
+        const fallbackResponse = generateFallbackResponse(userMessage, character.personality_traits || []);
         
         const { data: newCharacterMessage, error: characterMessageError } = await supabase
           .from('messages')
@@ -292,11 +216,9 @@ const ChatPage: React.FC = () => {
         }
       }
       
-      // Improved love meter progression
-      if (activeChat && Math.random() > 0.6) { // Increased chance for progression
-        const currentLove = activeChat.love_meter || 0;
-        const increment = Math.random() > 0.8 ? 2 : 1; // Occasional bigger jumps
-        const newLoveMeter = Math.min(currentLove + increment, 100);
+      // Small chance to increase love meter for every interaction
+      if (activeChat && Math.random() > 0.7) {
+        const newLoveMeter = Math.min((activeChat.love_meter || 0) + 1, 100);
         updateLoveMeter(newLoveMeter);
         
         // Update in database
@@ -311,103 +233,51 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Enhanced fallback response generation with character context
-  const generateEnhancedFallbackResponse = (
-    message: string, 
-    traits: string[], 
-    backstory: string, 
-    meetCute: string, 
-    characterName: string
-  ): string => {
+  // Fallback response generation for when AI service is unavailable
+  const generateFallbackResponse = (message: string, traits: string[]): string => {
     const lowerCaseMessage = message.toLowerCase();
-    
-    // Context-aware responses based on backstory and meet-cute
-    const hasBackstory = backstory && backstory.trim().length > 0;
-    const hasMeetCute = meetCute && meetCute.trim().length > 0;
     
     if (lowerCaseMessage.includes('hello') || lowerCaseMessage.includes('hi')) {
       if (traits.includes('shy')) {
-        return hasMeetCute 
-          ? `H-hi there... *blushes* I was just thinking about when we first met. How have you been?`
-          : `H-hi there... It's nice to talk to you again. How have you been?`;
+        return "H-hi there... It's nice to talk to you again. How have you been?";
       } else if (traits.includes('flirty')) {
-        return hasMeetCute 
-          ? `Well hello there, gorgeous~ Still thinking about our first meeting. You always know how to make my heart race!`
-          : `Well hello there~ You always know how to make my heart skip a beat when you message me!`;
+        return "Well hello there~ You always know how to make my heart skip a beat when you message me!";
       } else if (traits.includes('confident')) {
-        return `Hey you! Great to hear from you. I was just thinking about you, actually.`;
-      } else if (traits.includes('chaotic')) {
-        return `OMG HI!!! I was LITERALLY just about to message you! How crazy is that?! Tell me EVERYTHING about your day!`;
+        return "Hey you! Great to hear from you. I was just thinking about you, actually.";
       } else {
-        return `Hi! It's so good to hear from you! How's your day going?`;
+        return "Hi! It's so good to hear from you! How's your day going?";
       }
-    } 
-    
-    else if (lowerCaseMessage.includes('how are you') || lowerCaseMessage.includes('how you doing')) {
+    } else if (lowerCaseMessage.includes('how are you') || lowerCaseMessage.includes('how you doing')) {
       if (traits.includes('mysterious')) {
-        return hasBackstory 
-          ? `I'm... well, let's just say I've been thinking about some things from my past. But more importantly, how are YOU?`
-          : `I'm... well, let's just say I'm managing. But more importantly, how are YOU?`;
+        return "I'm... well, let's just say I'm managing. But more importantly, how are YOU?";
       } else if (traits.includes('passionate')) {
-        return `I'm feeling absolutely wonderful now that we're talking! Every conversation with you brightens my day!`;
-      } else if (traits.includes('bookish')) {
-        return `I've been reading this fascinating book, but honestly, talking with you is so much more interesting. How about you?`;
+        return "I'm feeling absolutely wonderful now that we're talking! Every conversation with you brightens my day!";
       } else {
-        return `I'm doing really well, thanks for asking! Even better now that I'm talking to you. How about you?`;
+        return "I'm doing really well, thanks for asking! Even better now that I'm talking to you. How about you?";
       }
-    } 
-    
-    else if (lowerCaseMessage.includes('like') || lowerCaseMessage.includes('love')) {
+    } else if (lowerCaseMessage.includes('like') || lowerCaseMessage.includes('love')) {
       if (traits.includes('shy')) {
-        return `O-oh! You... you really mean that? *blushes deeply* That makes me really happy... I feel the same way about you.`;
+        return "O-oh! You... you really mean that? That makes me really happy... *blushes*";
       } else if (traits.includes('flirty')) {
-        return `Mmm, I like you too~ Maybe even more than you realize... Want to find out how much? 💕`;
-      } else if (traits.includes('loyal')) {
-        return `That means everything to me. I want you to know that you can always count on me, no matter what.`;
+        return "Mmm, I like you too~ Maybe even more than you realize... Want to find out how much? 💕";
       } else {
-        return `That means so much to me! I feel the same way about you... it's special, isn't it?`;
+        return "That means so much to me! I feel the same way about you... it's special, isn't it?";
       }
-    }
-    
-    else if (lowerCaseMessage.includes('tell me about yourself') || lowerCaseMessage.includes('about you')) {
-      if (hasBackstory) {
-        return `Well, ${backstory.substring(0, 100)}... But enough about me - I'd love to know more about you!`;
-      } else if (traits.length > 0) {
-        const traitDescription = traits.includes('creative') 
-          ? `I'm quite creative and love expressing myself through art and imagination.`
-          : traits.includes('protective')
-          ? `I'm someone who cares deeply about the people I love and will always be there for them.`
-          : `I'm ${traits.slice(0, 2).join(' and ')}, which I think makes our conversations interesting.`;
-        return `${traitDescription} What about you? I'd love to learn more about what makes you unique.`;
-      } else {
-        return `I'm just someone who enjoys deep conversations and meaningful connections. What about you? What makes you who you are?`;
-      }
-    }
-    
-    else {
-      // Enhanced generic responses with personality
-      const personalizedResponses = traits.includes('playful') 
-        ? [
-            "Ooh, that's interesting! Tell me more - I love hearing your thoughts!",
-            "You always have such unique perspectives! What else is on your mind?",
-            "That's so cool! I'm always amazed by the things you think about.",
-          ]
-        : traits.includes('caring')
-        ? [
-            "I can tell this is important to you. How are you feeling about it?",
-            "Thank you for sharing that with me. I really appreciate your openness.",
-            "You know I'm always here to listen. What else would you like to talk about?",
-          ]
-        : [
-            "Tell me more about that!",
-            "That's really interesting. What else is on your mind?",
-            "I'd love to hear more about your day.",
-            "You always have the most fascinating things to say.",
-            "That's cool! I'm really enjoying our conversation.",
-            "You know, talking with you is the highlight of my day.",
-          ];
+    } else {
+      // Generic responses
+      const genericResponses = [
+        "Tell me more about that!",
+        "That's really interesting. What else is on your mind?",
+        "I'd love to hear more about your day.",
+        "You always have the most fascinating things to say.",
+        "That's cool! I'm really enjoying our conversation.",
+        "You know, talking with you is the highlight of my day.",
+        "I'm so glad we connected. What else would you like to chat about?",
+        "Every conversation with you teaches me something new!",
+        "You have such unique perspectives. I really appreciate that about you."
+      ];
       
-      return personalizedResponses[Math.floor(Math.random() * personalizedResponses.length)];
+      return genericResponses[Math.floor(Math.random() * genericResponses.length)];
     }
   };
   
