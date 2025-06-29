@@ -162,7 +162,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               {plan.comingSoon && (
                 <div className="absolute -top-2 -right-2">
                   <div className="group relative">
-                    <div className="bg-lavendar-400 text-white p-2 rounded-full shadow-lg">
+                    <div className="bg-lavendar text-white p-2 rounded-full shadow-lg">
                       <Info className="h-4 w-4" />
                     </div>
                     <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
