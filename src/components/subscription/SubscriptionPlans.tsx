@@ -162,7 +162,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               {plan.comingSoon && (
                 <div className="absolute -top-2 -right-2">
                   <div className="group relative">
-                    <div className="text-white p-2 rounded-full shadow-lg" style={{ backgroundColor: '#6699ff' }}>
+                    <div className="text-white p-2 rounded-full shadow-lg" style={{ backgroundColor: '#7a8ff8' }}>
                       <Info className="h-4 w-4" />
                     </div>
                     <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
@@ -218,11 +218,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                     onClick={() => handleComingSoon(plan.name)}
                     className="w-full text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
                     style={{ 
-                      backgroundColor: '#6699ff',
+                      backgroundColor: '#7a8ff8',
                       ':hover': { backgroundColor: '#5588ee' }
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6699ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7a8ff8'}
                   >
                     <Info className="h-4 w-4" />
                     {plan.buttonText}
@@ -264,10 +264,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 onClick={() => handleComingSoon('Premium')}
                 className="inline-flex items-center px-6 py-3 text-white rounded-full font-medium transition-all duration-200 gap-2"
                 style={{ 
-                  backgroundColor: '#6699ff'
+                  backgroundColor: '#7a8ff8'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6699ff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7a8ff8'}
               >
                 <Info className="h-4 w-4" />
                 Get Notified
