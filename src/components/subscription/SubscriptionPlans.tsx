@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, Star, Crown, Info, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getSubscriptionPlans } from '../../lib/services/revenueCat';
-import { subscribeToNewsletter } from '../../lib/services/newsletter';
+import { subscribeToNewsletter, checkIfSubscribed } from '../../lib/services/newsletter';
 import { toast } from 'sonner';
 
 interface SubscriptionPlansProps {
@@ -35,6 +35,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
 }) => {
   const [revenueCatPackages, setRevenueCatPackages] = useState<RevenueCatPackage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isUserAlreadySubscribed, setIsUserAlreadySubscribed] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(false);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -48,6 +50,29 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
 
     fetchPackages();
   }, []);
+
+  // Check if user is already subscribed when userEmail changes
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      if (!userEmail) {
+        setIsUserAlreadySubscribed(false);
+        return;
+      }
+
+      setCheckingSubscription(true);
+      try {
+        const isSubscribed = await checkIfSubscribed(userEmail);
+        setIsUserAlreadySubscribed(isSubscribed);
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setIsUserAlreadySubscribed(false);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [userEmail]);
 
   const handleJoinWaitlist = async (planName: string) => {
     if (!userEmail) {
@@ -68,6 +93,9 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             : 'You\'ll be the first to know when premium features launch. You\'re also subscribed to our newsletter for updates.',
           duration: 6000,
         });
+        
+        // Update subscription status after successful subscription
+        setIsUserAlreadySubscribed(true);
       } else {
         toast.error(`Failed to join ${planName} waitlist`, {
           description: result.message,
@@ -119,7 +147,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
         'Voice messages',
         'Priority support'
       ],
-      buttonText: 'Join Waitlist', // Changed button text
+      buttonText: isUserAlreadySubscribed ? 'Already Subscribed!' : 'Join Waitlist',
       buttonVariant: 'coming-soon' as const,
       popular: true,
       comingSoon: true
@@ -165,7 +193,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {plans.map((plan, index) => {
           const isCurrentPlan = userSubscriptionTier === plan.id;
-          const isDisabled = plan.buttonVariant === 'disabled' || isCurrentPlan || loading;
+          const isWaitlistDisabled = plan.comingSoon && (isUserAlreadySubscribed || loading || checkingSubscription);
+          const isDisabled = plan.buttonVariant === 'disabled' || isCurrentPlan || isWaitlistDisabled;
 
           return (
             <motion.div
@@ -243,17 +272,54 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   </button>
                 ) : plan.comingSoon ? (
                   <button
-                    onClick={() => handleJoinWaitlist(plan.name)}
-                    disabled={loading}
-                    className="w-full text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => !isDisabled && handleJoinWaitlist(plan.name)}
+                    disabled={isDisabled}
+                    className={`w-full py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      isUserAlreadySubscribed
+                        ? 'bg-green-500 text-white cursor-default'
+                        : isDisabled
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                        : 'text-white hover:opacity-90'
+                    }`}
                     style={{ 
-                      backgroundColor: loading ? '#9ca3af' : '#7a8ff8',
+                      backgroundColor: isUserAlreadySubscribed 
+                        ? '#10b981' 
+                        : isDisabled 
+                        ? '#9ca3af' 
+                        : '#7a8ff8',
                     }}
-                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#5588ee')}
-                    onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#7a8ff8')}
+                    onMouseEnter={(e) => {
+                      if (!isDisabled && !isUserAlreadySubscribed) {
+                        e.currentTarget.style.backgroundColor = '#5588ee';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isDisabled && !isUserAlreadySubscribed) {
+                        e.currentTarget.style.backgroundColor = '#7a8ff8';
+                      }
+                    }}
                   >
-                    <Mail className="h-4 w-4" />
-                    {loading ? 'Joining...' : plan.buttonText}
+                    {checkingSubscription ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Checking...
+                      </>
+                    ) : isUserAlreadySubscribed ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Already Subscribed!
+                      </>
+                    ) : loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Joining...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4" />
+                        {plan.buttonText}
+                      </>
+                    )}
                   </button>
                 ) : (
                   <button
@@ -289,17 +355,52 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 Contact Support
               </button>
               <button
-                onClick={() => handleJoinWaitlist('Premium')}
-                disabled={loading}
-                className="inline-flex items-center px-6 py-3 text-white rounded-full font-medium transition-all duration-200 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => !isUserAlreadySubscribed && !loading && handleJoinWaitlist('Premium')}
+                disabled={isUserAlreadySubscribed || loading || checkingSubscription}
+                className={`inline-flex items-center px-6 py-3 rounded-full font-medium transition-all duration-200 gap-2 ${
+                  isUserAlreadySubscribed
+                    ? 'bg-green-500 text-white cursor-default'
+                    : 'text-white'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
                 style={{ 
-                  backgroundColor: loading ? '#9ca3af' : '#7a8ff8'
+                  backgroundColor: isUserAlreadySubscribed 
+                    ? '#10b981' 
+                    : loading || checkingSubscription 
+                    ? '#9ca3af' 
+                    : '#7a8ff8'
                 }}
-                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#5588ee')}
-                onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#7a8ff8')}
+                onMouseEnter={(e) => {
+                  if (!isUserAlreadySubscribed && !loading && !checkingSubscription) {
+                    e.currentTarget.style.backgroundColor = '#5588ee';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isUserAlreadySubscribed && !loading && !checkingSubscription) {
+                    e.currentTarget.style.backgroundColor = '#7a8ff8';
+                  }
+                }}
               >
-                <Mail className="h-4 w-4" />
-                {loading ? 'Joining...' : 'Join Waitlist'}
+                {checkingSubscription ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Checking...
+                  </>
+                ) : isUserAlreadySubscribed ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Already Subscribed!
+                  </>
+                ) : loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Joining...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4" />
+                    Join Waitlist
+                  </>
+                )}
               </button>
             </div>
           </div>

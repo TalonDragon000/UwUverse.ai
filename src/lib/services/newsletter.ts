@@ -1,5 +1,21 @@
 import { supabase } from '../supabase/supabaseClient';
 
+export const checkIfSubscribed = async (email: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('newsletter_subscribers')
+      .select('email')
+      .eq('email', email)
+      .single();
+
+    // If we found a record, user is subscribed
+    return !error && !!data;
+  } catch (error) {
+    // If there's an error (like no record found), user is not subscribed
+    return false;
+  }
+};
+
 export const subscribeToNewsletter = async (email: string, source: string = 'newsletter') => {
   try {
     // First, check if the email already exists
