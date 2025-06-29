@@ -5,6 +5,7 @@ import Navbar from '../components/layout/Navbar';
 import { useCharacterStore } from '../stores/characterStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase/supabaseClient';
+import { generateCharacterImage } from '../lib/services/ai-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import CharacterSuccessModal from '../components/character/CharacterSuccessModal';
 
@@ -368,38 +369,26 @@ const CharacterCreationPage: React.FC = () => {
         personality_traits: selectedTraits
       });
       
-      // Call the AI service to generate character image and get Tavus data
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image-generation`;
-      const headers = {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      };
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          name: characterCreationData.name,
-          gender: characterCreationData.gender,
-          height: characterCreationData.height,
-          build: characterCreationData.build,
-          eye_color: characterCreationData.eye_color,
-          hair_color: characterCreationData.hair_color,
-          skin_tone: characterCreationData.skin_tone,
-          personality_traits: selectedTraits,
-          art_style: characterCreationData.art_style,
-        }),
+      // Call the AI service to generate character image using Stable Diffusion
+      const imageData = await generateCharacterImage({
+        name: characterCreationData.name || '',
+        gender: characterCreationData.gender || 'nonbinary',
+        height: characterCreationData.height || 'average',
+        build: characterCreationData.build || 'average',
+        eye_color: characterCreationData.eye_color || 'brown',
+        hair_color: characterCreationData.hair_color || 'brown',
+        skin_tone: characterCreationData.skin_tone || 'medium',
+        personality_traits: selectedTraits,
+        art_style: characterCreationData.art_style || 'anime',
       });
-
-      const aiData = await response.json();
       
-      if (!aiData.success) {
-        throw new Error(aiData.error || 'Failed to generate character');
+      if (!imageData.success) {
+        throw new Error(imageData.error || 'Failed to generate character image');
       }
 
       // Show a message if using fallback features
-      if (aiData.fallback && aiData.message) {
-        console.log('Using fallback features:', aiData.message);
+      if (imageData.fallback && imageData.message) {
+        console.log('Using fallback features:', imageData.message);
       }
 
       // Get the selected voice data
@@ -422,9 +411,7 @@ const CharacterCreationPage: React.FC = () => {
           art_style: characterCreationData.art_style || 'anime',
           backstory: characterCreationData.backstory || '',
           meet_cute: characterCreationData.meet_cute || 'coffee shop',
-          image_url: aiData.image_url,
-          tavus_character_id: aiData.tavus_character_id,
-          tavus_video_url: aiData.tavus_video_url,
+          image_url: imageData.image_url,
           voice_id: selectedVoiceId,
           voice_name: selectedVoice?.name,
         })
@@ -941,7 +928,7 @@ const CharacterCreationPage: React.FC = () => {
                 Ready to Generate Your AI Companion
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                We'll create your perfect AI partner based on all the details you've provided.
+                We'll create your perfect AI partner using advanced Stable Diffusion technology based on all the details you've provided.
               </p>
             </div>
             
@@ -968,7 +955,7 @@ const CharacterCreationPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {session 
-                  ? "Click 'Create Character' to generate your AI companion!"
+                  ? "Click 'Create Character' to generate your AI companion using Stable Diffusion!"
                   : "You need to login or create an account to save your character."
                 }
               </p>
