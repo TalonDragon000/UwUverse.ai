@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Star, Crown } from 'lucide-react';
+import { Check, Star, Crown, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { purchaseSubscription, getSubscriptionPlans } from '../../lib/services/revenueCat';
+import { getSubscriptionPlans } from '../../lib/services/revenueCat';
 import { toast } from 'sonner';
 
 interface SubscriptionPlansProps {
@@ -46,32 +46,11 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
     fetchPackages();
   }, []);
 
-  const handleUpgrade = async (planId: string) => {
-    setLoading(true);
-    try {
-      // Find the corresponding RevenueCat package
-      const revenueCatPackage = revenueCatPackages.find(pkg => 
-        pkg.identifier.toLowerCase().includes(planId.toLowerCase()) ||
-        pkg.product.identifier.toLowerCase().includes(planId.toLowerCase())
-      );
-
-      if (!revenueCatPackage) {
-        throw new Error(`No RevenueCat package found for plan: ${planId}`);
-      }
-
-      await purchaseSubscription(revenueCatPackage.identifier);
-      toast.success('Subscription upgraded successfully!');
-      
-      // Trigger subscription update callback
-      if (onSubscriptionUpdate) {
-        onSubscriptionUpdate();
-      }
-    } catch (error) {
-      console.error('Subscription error:', error);
-      toast.error('Failed to upgrade subscription. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleComingSoon = (planName: string) => {
+    toast.info(`${planName} subscriptions are coming soon! 🚀`, {
+      description: 'We\'re working hard to bring you premium features. Stay tuned for updates!',
+      duration: 4000,
+    });
   };
 
   const handleContactSupport = () => {
@@ -94,7 +73,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       ],
       buttonText: 'Current Plan',
       buttonVariant: 'disabled' as const,
-      popular: false
+      popular: false,
+      comingSoon: false
     },
     {
       id: 'pro',
@@ -111,9 +91,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
         'Voice messages',
         'Priority support'
       ],
-      buttonText: 'Upgrade to Pro',
-      buttonVariant: 'primary' as const,
-      popular: true
+      buttonText: 'Coming Soon',
+      buttonVariant: 'coming-soon' as const,
+      popular: true,
+      comingSoon: true
     },
     {
       id: 'enterprise',
@@ -133,7 +114,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       ],
       buttonText: 'Contact Us',
       buttonVariant: 'outline' as const,
-      popular: false
+      popular: false,
+      comingSoon: false
     }
   ];
 
@@ -174,6 +156,19 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   <span className="bg-gradient-to-r from-pink-400 to-lavender-400 text-white px-4 py-1 text-sm font-medium rounded-full">
                     Most Popular
                   </span>
+                </div>
+              )}
+
+              {plan.comingSoon && (
+                <div className="absolute -top-2 -right-2">
+                  <div className="group relative">
+                    <div className="bg-blue-500 text-white p-2 rounded-full shadow-lg">
+                      <Info className="h-4 w-4" />
+                    </div>
+                    <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      Premium subscriptions launching soon! Get ready for enhanced AI companion features.
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -218,19 +213,24 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   >
                     {plan.buttonText}
                   </button>
+                ) : plan.comingSoon ? (
+                  <button
+                    onClick={() => handleComingSoon(plan.name)}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <Info className="h-4 w-4" />
+                    {plan.buttonText}
+                  </button>
                 ) : (
                   <button
-                    onClick={() => !isDisabled && handleUpgrade(plan.id)}
                     disabled={isDisabled}
                     className={`w-full py-3 px-6 rounded-full font-medium transition-all duration-200 ${
                       isCurrentPlan
                         ? 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-default'
-                        : plan.popular
-                        ? 'bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
-                        : 'bg-pink-400 hover:bg-pink-500 dark:bg-pink-600 dark:hover:bg-pink-500 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 cursor-default'
                     }`}
                   >
-                    {loading ? 'Processing...' : isCurrentPlan ? 'Current Plan' : plan.buttonText}
+                    {isCurrentPlan ? 'Current Plan' : plan.buttonText}
                   </button>
                 )}
               </div>
@@ -242,16 +242,26 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       {variant === 'detailed' && (
         <div className="mt-16 text-center">
           <div className="bg-gradient-to-r from-pink-50 to-lavender-50 dark:from-pink-900/20 dark:to-lavender-900/20 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold mb-4">Need Help Choosing?</h3>
+            <h3 className="text-2xl font-bold mb-4">Premium Features Coming Soon! 🚀</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
-              Not sure which plan is right for you? Our team is here to help you find the perfect fit for your AI companion needs.
+              We're working hard to bring you enhanced AI companion features with our Pro and Enterprise plans. 
+              Stay tuned for exciting updates and be the first to know when premium subscriptions launch!
             </p>
-            <button
-              onClick={handleContactSupport}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white rounded-full font-medium transition-all duration-200"
-            >
-              Contact Support
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleContactSupport}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-400 to-lavender-400 hover:from-pink-500 hover:to-lavender-500 text-white rounded-full font-medium transition-all duration-200"
+              >
+                Contact Support
+              </button>
+              <button
+                onClick={() => handleComingSoon('Premium')}
+                className="inline-flex items-center px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-medium transition-all duration-200 gap-2"
+              >
+                <Info className="h-4 w-4" />
+                Get Notified
+              </button>
+            </div>
           </div>
         </div>
       )}
