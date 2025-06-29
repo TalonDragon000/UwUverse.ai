@@ -216,7 +216,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 ) : plan.comingSoon ? (
                   <button
                     onClick={() => handleComingSoon(plan.name)}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    className="w-full bg-blue-400 hover:bg-blue-500 text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Info className="h-4 w-4" />
                     {plan.buttonText}
