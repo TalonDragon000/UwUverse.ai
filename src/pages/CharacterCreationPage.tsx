@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase/supabaseClient';
 import { generateCharacterImage } from '../lib/services/ai-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import CharacterSuccessModal from '../components/character/CharacterSuccessModal';
+import ToastContainer from '../components/ui/ToastContainer';
+import { useToast } from '../hooks/useToast';
 
 const PERSONALITY_TRAITS = [
   'shy', 'flirty', 'confident', 'chaotic',
@@ -75,6 +77,7 @@ const CharacterCreationPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdCharacter, setCreatedCharacter] = useState<any>(null);
+  const { toasts, toast, removeToast } = useToast();
   
   // Voice-related state
   const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
@@ -230,12 +233,19 @@ const CharacterCreationPage: React.FC = () => {
             URL.revokeObjectURL(audioUrl);
           };
 
-          audio.onerror = (e) => {
-            console.error('Audio playback error:', e);
+          audio.onerror = () => {
             setCurrentlyPlaying(null);
             setCurrentAudio(null);
             URL.revokeObjectURL(audioUrl);
-            // Just select the voice without showing an error
+            
+            // Show user-friendly notification instead of console error
+            toast.info({
+              title: 'Voice Selected',
+              message: 'Preview unavailable, but voice has been selected successfully.',
+              duration: 3000
+            });
+            
+            // Still select the voice
             updateCharacterCreationData({ voice_accent: voiceName });
             setSelectedVoiceId(voiceId);
           };
@@ -1063,6 +1073,9 @@ const CharacterCreationPage: React.FC = () => {
           </div>
         </div>
       </main>
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       
       {/* Success Modal */}
       {showSuccessModal && createdCharacter && (
