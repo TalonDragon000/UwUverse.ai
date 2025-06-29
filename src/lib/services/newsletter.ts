@@ -27,12 +27,12 @@ export const subscribeToNewsletter = async (email: string, source: string = 'new
       data,
     };
   } catch (error: any) {
-    if (error.code === '23505') { // unique_violation
+    if (error.code === '23505') { // unique_violation - email already exists
       return {
-        success: false,
+        success: true, // Changed from false to true
         message: source === 'pro_waitlist'
-          ? 'You\'re already on the Pro waitlist!'
-          : 'This email is already subscribed to our newsletter.',
+          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
+          : 'You\'re already subscribed to our newsletter. Thank you!',
       };
     }
     
