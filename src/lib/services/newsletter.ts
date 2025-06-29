@@ -2,6 +2,24 @@ import { supabase } from '../supabase/supabaseClient';
 
 export const subscribeToNewsletter = async (email: string, source: string = 'newsletter') => {
   try {
+    // First, check if the email already exists
+    const { data: existingSubscriber, error: checkError } = await supabase
+      .from('newsletter_subscribers')
+      .select('email, source')
+      .eq('email', email)
+      .single();
+
+    // If we found an existing subscriber, return success message
+    if (existingSubscriber && !checkError) {
+      return {
+        success: true,
+        message: source === 'pro_waitlist' 
+          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
+          : 'You\'re already subscribed to our newsletter. Thank you!',
+      };
+    }
+
+    // If no existing subscriber found, proceed with insert
     const { data, error } = await supabase
       .from('newsletter_subscribers')
       .insert([
@@ -14,17 +32,7 @@ export const subscribeToNewsletter = async (email: string, source: string = 'new
       .select()
       .single();
 
-    // Handle duplicate email case immediately after the database call
-    if (error && error.code === '23505') { // unique_violation - email already exists
-      return {
-        success: true, // Return success for duplicate emails
-        message: source === 'pro_waitlist' 
-          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
-          : 'You\'re already subscribed to our newsletter. Thank you!',
-      };
-    }
-
-    // Handle any other database errors
+    // Handle any database errors
     if (error) throw error;
 
     // In a real application, you would send a confirmation email here
