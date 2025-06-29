@@ -19,37 +19,31 @@ const MEET_CUTE_SCENARIOS = [
   'coffee shop', 'neighbors', 'childhood friends', 'blind date'
 ];
 
-// Art styles with sample thumbnails
+// Art styles with custom thumbnails
 const ART_STYLES_DATA = [
   {
     id: 'anime',
     label: 'Anime',
-    thumbnail_url: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    thumbnail_url: '/art-styles/male anime.jpg',
     description: 'Japanese animation style with large expressive eyes and vibrant colors'
   },
   {
-    id: 'manhwa',
-    label: 'Manhwa',
-    thumbnail_url: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
-    description: 'Korean webtoon style with detailed features and soft shading'
+    id: '3d',
+    label: '3D',
+    thumbnail_url: '/art-styles/female 3d.jpg',
+    description: 'Modern 3D rendered style with realistic lighting and textures'
   },
   {
     id: 'comic',
-    label: 'Comic',
-    thumbnail_url: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    label: 'Comic Book',
+    thumbnail_url: '/art-styles/female comicbook.jpg',
     description: 'Western comic book style with bold lines and dynamic poses'
   },
   {
     id: 'realistic',
     label: 'Realistic',
-    thumbnail_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    thumbnail_url: '/art-styles/female realistic.jpg',
     description: 'Photorealistic digital art with natural proportions and lighting'
-  },
-  {
-    id: 'cartoon',
-    label: 'Cartoon',
-    thumbnail_url: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
-    description: 'Stylized cartoon with exaggerated features and bright colors'
   }
 ];
 
@@ -62,7 +56,6 @@ interface ElevenLabsVoice {
   tone: string;
   description: string;
   preview_url?: string;
-  api_version?: string;
 }
 
 interface VoiceFilters {
@@ -620,7 +613,7 @@ const CharacterCreationPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 Art Style
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {ART_STYLES_DATA.map((style) => (
                   <button
                     key={style.id}
