@@ -177,6 +177,7 @@ const PricingPage: React.FC = () => {
               userSubscriptionTier={userProfile?.subscription_tier || (session ? 'free' : undefined)}
               showHeader={false}
               variant="detailed"
+              userEmail={session?.user?.email} // Pass user email for waitlist
               onSubscriptionUpdate={handleSubscriptionUpdate}
             />
           </div>

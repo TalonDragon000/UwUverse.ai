@@ -1,6 +1,6 @@
 import { supabase } from '../supabase/supabaseClient';
 
-export const subscribeToNewsletter = async (email: string) => {
+export const subscribeToNewsletter = async (email: string, source: string = 'newsletter') => {
   try {
     const { data, error } = await supabase
       .from('newsletter_subscribers')
@@ -8,6 +8,7 @@ export const subscribeToNewsletter = async (email: string) => {
         {
           email,
           confirmation_token: crypto.randomUUID(),
+          source, // Add source tracking
         }
       ])
       .select()
@@ -20,20 +21,26 @@ export const subscribeToNewsletter = async (email: string) => {
     
     return {
       success: true,
-      message: 'Successfully subscribed to newsletter!',
+      message: source === 'pro_waitlist' 
+        ? 'Successfully added to Pro waitlist and subscribed to newsletter!'
+        : 'Successfully subscribed to newsletter!',
       data,
     };
-  } catch (error) {
+  } catch (error: any) {
     if (error.code === '23505') { // unique_violation
       return {
         success: false,
-        message: 'This email is already subscribed to our newsletter.',
+        message: source === 'pro_waitlist'
+          ? 'You\'re already on the Pro waitlist!'
+          : 'This email is already subscribed to our newsletter.',
       };
     }
     
     return {
       success: false,
-      message: 'Failed to subscribe to newsletter. Please try again.',
+      message: source === 'pro_waitlist'
+        ? 'Failed to join Pro waitlist. Please try again.'
+        : 'Failed to subscribe to newsletter. Please try again.',
     };
   }
 };
@@ -81,6 +88,29 @@ export const unsubscribeFromNewsletter = async (email: string) => {
     return {
       success: false,
       message: 'Failed to unsubscribe. Please try again.',
+    };
+  }
+};
+
+// New function to get waitlist subscribers for admin/marketing purposes
+export const getWaitlistSubscribers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('newsletter_subscribers')
+      .select('email, created_at, confirmed')
+      .eq('source', 'pro_waitlist')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to fetch waitlist subscribers.',
     };
   }
 };

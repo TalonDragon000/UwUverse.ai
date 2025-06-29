@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Star, Crown, Info } from 'lucide-react';
+import { Check, Star, Crown, Info, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getSubscriptionPlans } from '../../lib/services/revenueCat';
+import { subscribeToNewsletter } from '../../lib/services/newsletter';
 import { toast } from 'sonner';
 
 interface SubscriptionPlansProps {
   userSubscriptionTier?: string;
   showHeader?: boolean;
   variant?: 'default' | 'detailed';
+  userEmail?: string; // Add userEmail prop
   onSubscriptionUpdate?: () => void;
 }
 
@@ -28,6 +30,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   userSubscriptionTier = 'free',
   showHeader = true,
   variant = 'default',
+  userEmail, // Destructure userEmail
   onSubscriptionUpdate
 }) => {
   const [revenueCatPackages, setRevenueCatPackages] = useState<RevenueCatPackage[]>([]);
@@ -46,11 +49,34 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
     fetchPackages();
   }, []);
 
-  const handleComingSoon = (planName: string) => {
-    toast.info(`${planName} subscriptions are coming soon! 🚀`, {
-      description: 'We\'re working hard to bring you premium features. Stay tuned for updates!',
-      duration: 4000,
-    });
+  const handleJoinWaitlist = async (planName: string) => {
+    if (!userEmail) {
+      toast.error('Please log in to join the waitlist', {
+        description: 'You need to be logged in to join the Pro waitlist and receive updates.',
+        duration: 4000,
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await subscribeToNewsletter(userEmail, 'pro_waitlist');
+      if (result.success) {
+        toast.success(`🎉 Welcome to the ${planName} waitlist!`, {
+          description: 'You\'ll be the first to know when premium features launch. You\'re also subscribed to our newsletter for updates.',
+          duration: 6000,
+        });
+      } else {
+        toast.error(`Failed to join ${planName} waitlist`, {
+          description: result.message,
+          duration: 4000,
+        });
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleContactSupport = () => {
@@ -91,7 +117,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
         'Voice messages',
         'Priority support'
       ],
-      buttonText: 'Coming Soon',
+      buttonText: 'Join Waitlist', // Changed button text
       buttonVariant: 'coming-soon' as const,
       popular: true,
       comingSoon: true
@@ -166,7 +192,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                       <Info className="h-4 w-4" />
                     </div>
                     <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                      Premium subscriptions launching soon! Get ready for enhanced AI companion features.
+                      Join the waitlist for premium features! Be the first to know when they launch.
                     </div>
                   </div>
                 </div>
@@ -215,17 +241,17 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   </button>
                 ) : plan.comingSoon ? (
                   <button
-                    onClick={() => handleComingSoon(plan.name)}
-                    className="w-full text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    onClick={() => handleJoinWaitlist(plan.name)}
+                    disabled={loading}
+                    className="w-full text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ 
-                      backgroundColor: '#7a8ff8',
-                      ':hover': { backgroundColor: '#5588ee' }
+                      backgroundColor: loading ? '#9ca3af' : '#7a8ff8',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7a8ff8'}
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#5588ee')}
+                    onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#7a8ff8')}
                   >
-                    <Info className="h-4 w-4" />
-                    {plan.buttonText}
+                    <Mail className="h-4 w-4" />
+                    {loading ? 'Joining...' : plan.buttonText}
                   </button>
                 ) : (
                   <button
@@ -251,7 +277,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             <h3 className="text-2xl font-bold mb-4">Premium Features Coming Soon! 🚀</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
               We're working hard to bring you enhanced AI companion features with our Pro and Enterprise plans. 
-              Stay tuned for exciting updates and be the first to know when premium subscriptions launch!
+              Join the waitlist to be the first to know when premium subscriptions launch!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
@@ -261,16 +287,17 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 Contact Support
               </button>
               <button
-                onClick={() => handleComingSoon('Premium')}
-                className="inline-flex items-center px-6 py-3 text-white rounded-full font-medium transition-all duration-200 gap-2"
+                onClick={() => handleJoinWaitlist('Premium')}
+                disabled={loading}
+                className="inline-flex items-center px-6 py-3 text-white rounded-full font-medium transition-all duration-200 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ 
-                  backgroundColor: '#7a8ff8'
+                  backgroundColor: loading ? '#9ca3af' : '#7a8ff8'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7a8ff8'}
+                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#5588ee')}
+                onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#7a8ff8')}
               >
-                <Info className="h-4 w-4" />
-                Get Notified
+                <Mail className="h-4 w-4" />
+                {loading ? 'Joining...' : 'Join Waitlist'}
               </button>
             </div>
           </div>

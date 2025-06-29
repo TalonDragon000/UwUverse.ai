@@ -362,6 +362,7 @@ export interface Database {
           created_at: string;
           confirmation_token: string | null;
           unsubscribed_at: string | null;
+          source: string; // Added source column
         };
         Insert: {
           id?: string;
@@ -370,6 +371,7 @@ export interface Database {
           created_at?: string;
           confirmation_token?: string | null;
           unsubscribed_at?: string | null;
+          source?: string; // Added source column
         };
         Update: {
           id?: string;
@@ -378,6 +380,7 @@ export interface Database {
           created_at?: string;
           confirmation_token?: string | null;
           unsubscribed_at?: string | null;
+          source?: string; // Added source column
         };
       };
       users: {
