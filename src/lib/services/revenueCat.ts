@@ -20,7 +20,7 @@ interface RevenueCatPackage {
 export const initializeRevenueCat = () => {
   console.log('RevenueCat initialization - Coming Soon');
   // Placeholder - no actual initialization
-  // When ready, uncomment: import Purchases from '@revenuecat/purchases-web';
+  import Purchases from '@revenuecat/purchases-web';
 };
 
 export const getSubscriptionPlans = async (): Promise<RevenueCatPackage[]> => {
