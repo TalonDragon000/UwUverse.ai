@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import OpenAI from 'npm:openai@4.28.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,9 +19,14 @@ interface CharacterRequest {
   art_style: string;
 }
 
-// Initialize Stability AI API
-const STABILITY_API_KEY = Deno.env.get('STABILITY_API_KEY') || 'sk-0lCsvzXwaYKKxA5AxqpQ4VlDda75BBQspBMbGM2ac38OhhYQ';
-const STABILITY_API_URL = 'https://api.stability.ai/v2beta/stable-image/generate/core';
+// Initialize OpenAI with retry logic
+const initializeOpenAI = () => {
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!apiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+  return new OpenAI({ apiKey });
+};
 
 // Exponential backoff retry wrapper
 const withRetry = async <T>(
@@ -32,9 +38,9 @@ const withRetry = async <T>(
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // 30 second timeout wrapper for Stability AI
+      // 15 second timeout wrapper
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Operation timeout')), 30000);
+        setTimeout(() => reject(new Error('Operation timeout')), 15000);
       });
       
       return await Promise.race([operation(), timeoutPromise]);
@@ -58,25 +64,28 @@ const withRetry = async <T>(
 const getFallbackImage = (gender: string, art_style: string): string => {
   const fallbackImages = {
     male: {
-      anime: '/art-styles/male anime.jpg',
-      '3d': '/art-styles/male 3d.jpg',
-      comic: '/art-styles/male comicbook.jpg',
-      realistic: '/art-styles/male 3d.jpg',
-      default: '/art-styles/male anime.jpg'
+      anime: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      manhwa: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      comic: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      realistic: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      cartoon: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      default: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
     },
     female: {
-      anime: '/art-styles/male anime.jpg',
-      '3d': '/art-styles/female 3d.jpg',
-      comic: '/art-styles/female comicbook.jpg',
-      realistic: '/art-styles/female realistic.jpg',
-      default: '/art-styles/female 3d.jpg'
+      anime: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      manhwa: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      comic: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      realistic: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      cartoon: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      default: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
     },
     nonbinary: {
-      anime: '/art-styles/male anime.jpg',
-      '3d': '/art-styles/male 3d.jpg',
-      comic: '/art-styles/male comicbook.jpg',
-      realistic: '/art-styles/female realistic.jpg',
-      default: '/art-styles/male anime.jpg'
+      anime: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      manhwa: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      comic: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      realistic: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      cartoon: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      default: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
     }
   };
 
@@ -92,103 +101,92 @@ serve(async (req) => {
   try {
     const { name, gender, height, build, eye_color, hair_color, skin_tone, personality_traits, art_style } = await req.json() as CharacterRequest;
 
-    // Try Stability AI first with retry logic
+    // Try OpenAI DALL-E first with retry logic
     try {
-      if (!STABILITY_API_KEY) {
-        throw new Error('Stability AI API key not configured');
-      }
+      const openai = initializeOpenAI();
       
-      // Enhanced art style descriptions for better Stability AI prompts
+      // Enhanced art style descriptions for better DALL-E prompts
       let stylePrefix = '';
       let styleDetails = '';
-      let negativePrompt = 'blurry, low quality, distorted, deformed, ugly, bad anatomy, extra limbs, text, watermark, signature, logo, copyright';
       
       switch (art_style) {
         case 'anime':
-          stylePrefix = 'High-quality anime illustration';
-          styleDetails = 'anime art style, cel-shaded, vibrant colors, large expressive eyes, clean line art, Studio Ghibli quality, detailed hair, soft lighting, anime character design';
-          negativePrompt += ', realistic, photographic, western cartoon';
+          stylePrefix = 'Create a high-quality anime illustration in the style of Studio Ghibli or modern anime';
+          styleDetails = 'with large expressive eyes, vibrant colors, soft cel-shading, clean line art, and dynamic anime proportions. The character should have the distinctive anime aesthetic with detailed hair and clothing textures.';
           break;
-        case '3d':
-          stylePrefix = 'High-quality 3D rendered character';
-          styleDetails = '3D render, digital art, realistic lighting, smooth textures, modern 3D character design, Pixar quality, detailed modeling, professional 3D artwork';
-          negativePrompt += ', 2D, flat, anime, cartoon';
+        case 'manhwa':
+          stylePrefix = 'Create a detailed manhwa/webtoon style illustration similar to Solo Leveling or Tower of God';
+          styleDetails = 'with refined facial features, soft gradient shading, detailed hair rendering, elegant proportions, and the sophisticated Korean webtoon art style. Use subtle color palettes and smooth digital painting techniques.';
           break;
         case 'comic':
-          stylePrefix = 'Western comic book style illustration';
-          styleDetails = 'comic book art, bold lines, dynamic shading, vibrant colors, superhero comic style, Marvel/DC Comics quality, detailed line work, dramatic lighting';
-          negativePrompt += ', anime, realistic, 3D render';
+          stylePrefix = 'Create a modern Western comic book style illustration like Marvel or DC Comics';
+          styleDetails = 'with bold clean line art, dynamic poses, strong contrast, vibrant colors, and heroic proportions. The character should have the classic superhero comic aesthetic with detailed costume design and dramatic lighting.';
           break;
         case 'realistic':
-          stylePrefix = 'Photorealistic digital portrait';
-          styleDetails = 'photorealistic, highly detailed, natural lighting, realistic skin texture, professional photography quality, lifelike, detailed facial features';
-          negativePrompt += ', anime, cartoon, comic book, stylized';
+          stylePrefix = 'Create a photorealistic digital painting with lifelike detail';
+          styleDetails = 'featuring natural human proportions, realistic skin textures, detailed facial features, natural lighting, and high-quality digital art rendering. The image should look like a professional portrait photograph.';
+          break;
+        case 'cartoon':
+          stylePrefix = 'Create a stylized cartoon illustration with Disney or Pixar-like quality';
+          styleDetails = 'featuring exaggerated but appealing features, bright vibrant colors, smooth rounded shapes, expressive character design, and charming cartoon aesthetics. The style should be family-friendly and visually appealing.';
           break;
         default:
-          stylePrefix = 'High-quality digital illustration';
-          styleDetails = 'professional digital art, detailed character design, vibrant colors, clean composition';
+          stylePrefix = 'Create a high-quality digital illustration';
+          styleDetails = 'with professional artistic quality, appealing character design, and vibrant colors.';
       }
 
       // Build personality-influenced pose and expression description
       const personalityDescription = personality_traits.length > 0 
-        ? `Expression and pose reflecting ${personality_traits.slice(0, 3).join(', ')} personality.`
-        : 'Friendly and approachable expression.';
+        ? `The character's expression and pose should reflect their ${personality_traits.slice(0, 3).join(', ')} personality traits.`
+        : 'The character should have a friendly and approachable expression.';
 
-      const prompt = `${stylePrefix} of a ${gender} character. ${styleDetails}
+      const prompt = `${stylePrefix} of a ${gender} character ${styleDetails}
 
-Character features: ${height} height, ${build} build, ${eye_color} eyes, ${hair_color} hair, ${skin_tone} skin tone. ${personalityDescription}
+Character Details:
+- ${height} height with a ${build} build
+- Striking ${eye_color} eyes and ${hair_color} hair
+- ${skin_tone} skin tone
+- ${personalityDescription}
 
-Portrait style, upper body shot, centered composition, soft background, high quality, professional artwork, detailed character design.`;
+Technical Requirements:
+- Portrait orientation, upper body shot with attention to facial details
+- The character should be centered with a soft, atmospheric background
+- High quality, well-lit, and suitable for a character profile
+- No text, watermarks, or logos
+- Professional digital art quality with clean composition
 
-      console.log('Generating image with Stability AI...');
-      console.log('Prompt:', prompt);
+Art Style: ${art_style} with all the distinctive visual characteristics of that style.`;
 
       const response = await withRetry(async () => {
-        const formData = new FormData();
-        formData.append('prompt', prompt);
-        formData.append('negative_prompt', negativePrompt);
-        formData.append('aspect_ratio', '1:1');
-        formData.append('seed', '0');
-        formData.append('output_format', 'jpeg');
-        formData.append('style_preset', art_style === 'anime' ? 'anime' : art_style === 'comic' ? 'comic-book' : 'photographic');
-
-        return await fetch(STABILITY_API_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${STABILITY_API_KEY}`,
-            'Accept': 'image/*',
-          },
-          body: formData,
+        return await openai.images.generate({
+          model: 'dall-e-3',
+          prompt: prompt,
+          size: '1024x1024',
+          quality: 'standard',
+          style: 'natural',
+          response_format: 'url',
+          n: 1,
         });
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Stability AI API error: ${response.status} ${response.statusText} - ${errorText}`);
-        throw new Error(`Stability AI API error: ${response.status} - ${errorText}`);
+      const imageUrl = response.data[0]?.url;
+      
+      if (!imageUrl) {
+        throw new Error('No image URL returned from OpenAI');
       }
-
-      // Get the image as a blob and convert to base64
-      const imageBlob = await response.blob();
-      const arrayBuffer = await imageBlob.arrayBuffer();
-      const base64Image = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const imageUrl = `data:image/jpeg;base64,${base64Image}`;
-
-      console.log('Successfully generated image with Stability AI');
 
       return new Response(
         JSON.stringify({ 
           success: true,
           image_url: imageUrl,
-          model_used: 'stability-ai-core',
-          art_style: art_style
+          model_used: 'dall-e-3'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
-    } catch (stabilityError) {
-      console.error('Stability AI image generation error:', stabilityError);
+    } catch (openaiError) {
+      console.error('OpenAI image generation error:', openaiError);
       
       // Use fallback image generation based on character attributes
       const fallbackImageUrl = getFallbackImage(gender, art_style);
@@ -198,8 +196,7 @@ Portrait style, upper body shot, centered composition, soft background, high qua
           success: true,
           image_url: fallbackImageUrl,
           fallback: true,
-          message: 'Character created with curated reference image. AI image generation temporarily unavailable.',
-          error_details: stabilityError.message
+          message: 'Character created with curated stock image. AI image generation temporarily unavailable.'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
