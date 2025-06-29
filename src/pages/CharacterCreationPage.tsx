@@ -36,7 +36,7 @@ const ART_STYLES_DATA = [
   {
     id: 'comic',
     label: 'Comic Book',
-    thumbnail_url: '/art-styles/female comicbook.jpg',
+    thumbnail_url: '/art-styles/male comicbook.jpg',
     description: 'Western comic book style with bold lines and dynamic poses'
   },
   {
