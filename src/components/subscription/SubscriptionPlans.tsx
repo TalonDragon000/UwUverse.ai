@@ -162,7 +162,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               {plan.comingSoon && (
                 <div className="absolute -top-2 -right-2">
                   <div className="group relative">
-                    <div className="bg-blue-300 text-white p-2 rounded-full shadow-lg">
+                    <div className="text-white p-2 rounded-full shadow-lg" style={{ backgroundColor: '#6699ff' }}>
                       <Info className="h-4 w-4" />
                     </div>
                     <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
@@ -216,7 +216,13 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 ) : plan.comingSoon ? (
                   <button
                     onClick={() => handleComingSoon(plan.name)}
-                    className="w-full bg-blue-400 hover:bg-blue-500 text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    className="w-full text-white py-3 px-6 rounded-full font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    style={{ 
+                      backgroundColor: '#6699ff',
+                      ':hover': { backgroundColor: '#5588ee' }
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6699ff'}
                   >
                     <Info className="h-4 w-4" />
                     {plan.buttonText}
@@ -256,7 +262,12 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               </button>
               <button
                 onClick={() => handleComingSoon('Premium')}
-                className="inline-flex items-center px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-medium transition-all duration-200 gap-2"
+                className="inline-flex items-center px-6 py-3 text-white rounded-full font-medium transition-all duration-200 gap-2"
+                style={{ 
+                  backgroundColor: '#6699ff'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5588ee'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6699ff'}
               >
                 <Info className="h-4 w-4" />
                 Get Notified
