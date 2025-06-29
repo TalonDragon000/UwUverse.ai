@@ -28,10 +28,10 @@ export const getSubscriptionPlans = async (): Promise<RevenueCatPackage[]> => {
   return [
     {
       identifier: 'pro_monthly',
-      packageType: 'monthly',
+      packageType: 'Subscription',
       product: {
         identifier: 'pro_plan',
-        description: 'Pro subscription with enhanced features',
+        description: 'Enhanced features for deeper connections',
         title: 'Pro Plan',
         price: '9.99',
         priceString: '$9.99',
