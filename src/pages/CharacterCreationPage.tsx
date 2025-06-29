@@ -70,7 +70,7 @@ const CharacterCreationPage: React.FC = () => {
     'Basic Details',
     'Appearance',
     'Personality',
-    'Voice & Style',
+    'Voice',
     'Backstory',
     'Generate'
   ];
@@ -581,6 +581,28 @@ const CharacterCreationPage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Art Style
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {['anime', 'manhwa', 'comic', 'realistic', 'cartoon'].map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    className={`p-3 rounded-lg border-2 text-center ${
+                      characterCreationData.art_style === style
+                        ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
+                        : 'border-gray-200 dark:border-gray-700'
+                    } transition-colors duration-200`}
+                    onClick={() => updateCharacterCreationData({ art_style: style as any })}
+                  >
+                    <span className="capitalize">{style}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         );
         
@@ -614,7 +636,7 @@ const CharacterCreationPage: React.FC = () => {
           </div>
         );
         
-      case 3: // Voice & Style
+      case 3: // Voice
         return (
           <div className="space-y-6">
             <div>
@@ -818,28 +840,6 @@ const CharacterCreationPage: React.FC = () => {
                   ✓ Voice selected: {voices.find(v => v.voice_id === selectedVoiceId)?.name}
                 </p>
               )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Art Style
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {['anime', 'manhwa', 'comic', 'realistic', 'cartoon'].map((style) => (
-                  <button
-                    key={style}
-                    type="button"
-                    className={`p-3 rounded-lg border-2 text-center ${
-                      characterCreationData.art_style === style
-                        ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
-                        : 'border-gray-200 dark:border-gray-700'
-                    } transition-colors duration-200`}
-                    onClick={() => updateCharacterCreationData({ art_style: style as any })}
-                  >
-                    <span className="capitalize">{style}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         );
