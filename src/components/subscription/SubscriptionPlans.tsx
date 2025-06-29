@@ -62,8 +62,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
     try {
       const result = await subscribeToNewsletter(userEmail, 'pro_waitlist');
       if (result.success) {
-        toast.success(`🎉 Welcome to the ${planName} waitlist!`, {
-          description: 'You\'ll be the first to know when premium features launch. You\'re also subscribed to our newsletter for updates.',
+        toast.success(`🎉 ${result.message}`, {
+          description: result.message.includes('already') 
+            ? 'Thanks for your continued interest! You\'ll receive updates when premium features launch.'
+            : 'You\'ll be the first to know when premium features launch. You\'re also subscribed to our newsletter for updates.',
           duration: 6000,
         });
       } else {
