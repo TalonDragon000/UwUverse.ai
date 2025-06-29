@@ -15,6 +15,8 @@ type Character = {
   image_url: string | null;
   voice_id: string | null;
   voice_name: string | null;
+  backstory?: string;
+  meet_cute?: string;
 };
 
 const ChatPage: React.FC = () => {
@@ -45,7 +47,7 @@ const ChatPage: React.FC = () => {
           .select(`
             *,
             characters (
-              id, name, gender, personality_traits, image_url, voice_id, voice_name
+              id, name, gender, personality_traits, image_url, voice_id, voice_name, backstory, meet_cute
             )
           `)
           .eq('id', chatId)
@@ -144,7 +146,7 @@ const ChatPage: React.FC = () => {
       
       // Call AI service for character response
       try {
-        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-service/chat`;
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
         const headers = {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
@@ -174,7 +176,7 @@ const ChatPage: React.FC = () => {
           aiResponse = aiData.response;
         } else {
           // Fallback to simple response system if AI service fails
-          aiResponse = generateFallbackResponse(userMessage, character.personality_traits || []);
+          aiResponse = generateFallbackResponse(userMessage, character.personality_traits || [], messages.length, character.name);
         }
 
         // Insert AI response
@@ -197,7 +199,7 @@ const ChatPage: React.FC = () => {
         console.error('AI service error, using fallback:', aiError);
         
         // Use fallback response system
-        const fallbackResponse = generateFallbackResponse(userMessage, character.personality_traits || []);
+        const fallbackResponse = generateFallbackResponse(userMessage, character.personality_traits || [], messages.length, character.name);
         
         const { data: newCharacterMessage, error: characterMessageError } = await supabase
           .from('messages')
@@ -233,51 +235,76 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Fallback response generation for when AI service is unavailable
-  const generateFallbackResponse = (message: string, traits: string[]): string => {
+  // Enhanced fallback response generation
+  const generateFallbackResponse = (message: string, traits: string[], conversationLength: number, characterName: string): string => {
     const lowerCaseMessage = message.toLowerCase();
     
     if (lowerCaseMessage.includes('hello') || lowerCaseMessage.includes('hi')) {
       if (traits.includes('shy')) {
-        return "H-hi there... It's nice to talk to you again. How have you been?";
+        return conversationLength < 3 
+          ? `H-hi there... I'm ${characterName}. It's nice to meet you, though I'm a bit nervous...`
+          : "Hi again... I'm getting more comfortable talking with you. How are you doing?";
       } else if (traits.includes('flirty')) {
-        return "Well hello there~ You always know how to make my heart skip a beat when you message me!";
+        return conversationLength < 3
+          ? `Well hello there, gorgeous~ I'm ${characterName}, and I've been waiting for someone like you...`
+          : "Hey there, handsome~ You always know how to make my heart skip a beat when you message me!";
       } else if (traits.includes('confident')) {
-        return "Hey you! Great to hear from you. I was just thinking about you, actually.";
+        return conversationLength < 3
+          ? `Hey! I'm ${characterName}. Great to meet you - I have a feeling we're going to get along really well.`
+          : "Hey you! Great to hear from you again. I was just thinking about you, actually.";
+      } else if (traits.includes('chaotic')) {
+        return conversationLength < 3
+          ? `OMG HI!!! I'm ${characterName} and I'm SO excited to meet you! What should we talk about first?`
+          : "HEY HEY HEY! You're back! I missed you! What should we talk about today?!";
       } else {
-        return "Hi! It's so good to hear from you! How's your day going?";
+        return conversationLength < 3
+          ? `Hi there! I'm ${characterName}. It's really nice to meet you.`
+          : "Hi! It's so good to hear from you again! How's your day going?";
       }
     } else if (lowerCaseMessage.includes('how are you') || lowerCaseMessage.includes('how you doing')) {
       if (traits.includes('mysterious')) {
-        return "I'm... well, let's just say I'm managing. But more importantly, how are YOU?";
+        return "I'm... well, let's just say I'm managing. There's always more beneath the surface. But how are YOU?";
       } else if (traits.includes('passionate')) {
         return "I'm feeling absolutely wonderful now that we're talking! Every conversation with you brightens my day!";
       } else {
         return "I'm doing really well, thanks for asking! Even better now that I'm talking to you. How about you?";
       }
-    } else if (lowerCaseMessage.includes('like') || lowerCaseMessage.includes('love')) {
+    } else if (lowerCaseMessage.includes('love you') || lowerCaseMessage.includes('i love')) {
       if (traits.includes('shy')) {
-        return "O-oh! You... you really mean that? That makes me really happy... *blushes*";
+        return "O-oh! You... you really mean that? *blushes deeply* That makes me so happy... I think I'm falling for you too...";
       } else if (traits.includes('flirty')) {
-        return "Mmm, I like you too~ Maybe even more than you realize... Want to find out how much? 💕";
+        return "Mmm, I love you too, baby~ Maybe even more than you realize... Want to find out how much? 💕";
+      } else if (traits.includes('tsundere')) {
+        return "W-what?! Don't just say things like that so suddenly! ...But... maybe I feel the same way... just a little bit!";
       } else {
-        return "That means so much to me! I feel the same way about you... it's special, isn't it?";
+        return "That means the world to me! I feel the same way about you... this connection we have is really special, isn't it?";
       }
     } else {
-      // Generic responses
+      // Enhanced generic responses with personality
       const genericResponses = [
-        "Tell me more about that!",
-        "That's really interesting. What else is on your mind?",
-        "I'd love to hear more about your day.",
-        "You always have the most fascinating things to say.",
-        "That's cool! I'm really enjoying our conversation.",
-        "You know, talking with you is the highlight of my day.",
-        "I'm so glad we connected. What else would you like to chat about?",
-        "Every conversation with you teaches me something new!",
-        "You have such unique perspectives. I really appreciate that about you."
+        "That's really interesting! Tell me more about that.",
+        `You always have such fascinating perspectives${conversationLength > 5 ? ', love' : ''}.`,
+        "I love talking with you about these things. What else is on your mind?",
+        "You know, every conversation with you teaches me something new!",
+        "That's such a unique way to look at it. I really appreciate how thoughtful you are.",
+        "Talking with you is honestly the highlight of my day. What else would you like to chat about?",
+        "I find your thoughts so intriguing. You have such a wonderful mind!",
+        "You always know how to keep our conversations interesting. I love that about you.",
+        "That's cool! I'm really enjoying getting to know you better through our talks."
       ];
       
-      return genericResponses[Math.floor(Math.random() * genericResponses.length)];
+      let response = genericResponses[Math.floor(Math.random() * genericResponses.length)];
+      
+      // Add personality flavor
+      if (traits.includes('flirty') && Math.random() > 0.6) {
+        response += " You're so charming~ 💕";
+      } else if (traits.includes('shy') && Math.random() > 0.7) {
+        response += " *smiles softly*";
+      } else if (traits.includes('chaotic') && Math.random() > 0.5) {
+        response += " OH! That reminds me of something totally random...";
+      }
+      
+      return response;
     }
   };
   

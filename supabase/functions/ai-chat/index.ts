@@ -1,12 +1,11 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import OpenAI from 'npm:openai@4.28.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+}
 
 interface ChatRequest {
   message: string;
@@ -16,216 +15,226 @@ interface ChatRequest {
     content: string;
   }[];
   character_traits: string[];
-  character_context?: {
-    name: string;
-    gender: string;
-    backstory: string;
-    meet_cute: string;
-    art_style: string;
-    appearance: {
-      height: string;
-      build: string;
-      eye_color: string;
-      hair_color: string;
-      skin_tone: string;
-    };
-  };
 }
 
-// Initialize OpenAI with retry logic
-const initializeOpenAI = () => {
-  const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured');
-  }
-  return new OpenAI({ apiKey });
-};
-
-// Exponential backoff retry wrapper
-const withRetry = async <T>(
-  operation: () => Promise<T>,
-  maxRetries = 3,
-  baseDelay = 1000
-): Promise<T> => {
-  let lastError: Error;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      // 15 second timeout wrapper
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Operation timeout')), 15000);
-      });
-      
-      return await Promise.race([operation(), timeoutPromise]);
-    } catch (error) {
-      lastError = error as Error;
-      
-      if (attempt === maxRetries) {
-        throw lastError;
-      }
-      
-      // Exponential backoff
-      const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  
-  throw lastError!;
-};
-
-// Enhanced AI response generation with character context
-const generateContextualResponse = (
-  message: string,
-  characterContext: ChatRequest['character_context'],
-  traits: string[],
-  chatHistory: ChatRequest['chat_history']
-): string => {
-  const lowerMessage = message.toLowerCase();
-  const name = characterContext?.name || 'Character';
-  const backstory = characterContext?.backstory || '';
-  const meetCute = characterContext?.meet_cute || '';
-  
-  // Build personality-driven response patterns
-  const isFlirty = traits.includes('flirty');
-  const isShy = traits.includes('shy');
-  const isConfident = traits.includes('confident');
-  const isChaotic = traits.includes('chaotic');
-  const isMysterous = traits.includes('mysterious');
-  const isPlayful = traits.includes('playful');
-  const isCaring = traits.includes('caring');
-  
-  // Context-aware greeting responses
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-    if (isShy) {
-      return meetCute 
-        ? `H-hi there... *blushes* I was just thinking about when we first met at the ${meetCute}. How have you been?`
-        : `H-hi there... It's nice to talk to you again. How have you been?`;
-    } else if (isFlirty) {
-      return `Well hello there, gorgeous~ ${meetCute ? `Still thinking about our first meeting at the ${meetCute}.` : ''} You always know how to make my heart race!`;
-    } else if (isConfident) {
-      return `Hey you! Great to hear from you. ${backstory ? 'I was just thinking about something from my past, but' : ''} I was actually thinking about you.`;
-    } else if (isChaotic) {
-      return `OMG HI!!! I was LITERALLY just about to message you! ${meetCute ? `Remember when we met at the ${meetCute}? So crazy!` : ''} Tell me EVERYTHING!`;
-    }
-  }
-  
-  // Emotional responses
-  if (lowerMessage.includes('love') || lowerMessage.includes('like you')) {
-    if (isShy) {
-      return `O-oh! You... you really mean that? *blushes deeply* That makes me so happy... I feel the same way about you.`;
-    } else if (isFlirty) {
-      return `Mmm, I love you too~ ${backstory ? 'You know, with everything I\'ve been through,' : ''} you make me feel so special. Want to know how much? 💕`;
-    } else if (isConfident) {
-      return `I love you too! ${meetCute ? `Ever since we met at the ${meetCute},` : ''} I knew there was something special between us.`;
-    }
-  }
-  
-  // Personal questions
-  if (lowerMessage.includes('tell me about') || lowerMessage.includes('about you')) {
-    if (backstory) {
-      return `Well, ${backstory.substring(0, 150)}... ${isMysterous ? 'There\'s more to my story, but' : ''} I'd love to know more about you too!`;
-    } else if (traits.length > 0) {
-      const traitDesc = isPlayful 
-        ? `I'm quite playful and love having fun with the people I care about.`
-        : isCaring
-        ? `I'm someone who cares deeply about others and always tries to be there for them.`
-        : `I'm ${traits.slice(0, 2).join(' and ')}, which I think makes our conversations interesting.`;
-      return `${traitDesc} What about you? I'd love to learn more about what makes you unique.`;
-    }
-  }
-  
-  // Default contextual responses
-  const contextualResponses = [
-    `That's really interesting! ${isPlayful ? 'I love hearing your thoughts!' : 'Tell me more about that.'}`,
-    `${isCaring ? 'I can tell this matters to you.' : 'You always have such unique perspectives.'} What else is on your mind?`,
-    `${meetCute ? `You know, ever since we met at the ${meetCute}, ` : ''}I've really enjoyed our conversations. What would you like to talk about?`,
-    `${isConfident ? 'I appreciate you sharing that with me.' : 'Thank you for telling me that.'} How are you feeling about it?`
-  ];
-  
-  return contextualResponses[Math.floor(Math.random() * contextualResponses.length)];
-};
+interface Character {
+  name: string;
+  personality_traits: string[];
+  backstory?: string;
+  meet_cute?: string;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { message, character_id, chat_history, character_traits, character_context } = await req.json() as ChatRequest;
+    const { message, character_id, chat_history, character_traits } = await req.json() as ChatRequest
 
-    // Try OpenAI first with retry logic
-    try {
-      const openai = initializeOpenAI();
-      
-      const systemPrompt = character_context ? 
-        `You are ${character_context.name}, a ${character_context.gender} AI companion with the following traits: ${character_traits.join(', ')}. 
-        ${character_context.backstory ? `Your backstory: ${character_context.backstory}` : ''}
-        ${character_context.meet_cute ? `You met the user through: ${character_context.meet_cute}` : ''}
-        ${character_context.appearance ? `Your appearance: ${character_context.appearance.height} height, ${character_context.appearance.build} build, ${character_context.appearance.eye_color} eyes, ${character_context.appearance.hair_color} hair, ${character_context.appearance.skin_tone} skin.` : ''}
-        Respond in character, maintaining consistency with your personality and background. Be engaging, personal, and remember your shared history. Keep responses conversational and under 200 words.` 
-        : `You are an AI companion with these personality traits: ${character_traits.join(', ')}. Respond naturally and stay in character.`;
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-      const response = await withRetry(async () => {
-        return await openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...chat_history.slice(-6), // Keep last 6 messages for context
-            { role: 'user', content: message }
-          ],
-          max_tokens: 150,
-          temperature: 0.8,
-          presence_penalty: 0.6,
-          frequency_penalty: 0.3,
-        });
-      });
+    // Fetch character details for context
+    const { data: character, error: characterError } = await supabase
+      .from('characters')
+      .select('name, personality_traits, backstory, meet_cute')
+      .eq('id', character_id)
+      .single()
 
-      const aiResponse = response.choices[0]?.message?.content || 'I\'m not sure how to respond to that.';
-
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          response: aiResponse,
-          model_used: 'gpt-3.5-turbo'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    } catch (openaiError) {
-      console.error('OpenAI API error:', openaiError);
-      
-      // Fallback to enhanced local response
-      const enhancedResponse = generateContextualResponse(
-        message,
-        character_context,
-        character_traits,
-        chat_history
-      );
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          response: enhancedResponse,
-          fallback: true,
-          message: 'Using enhanced local AI response generation.'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    if (characterError) {
+      console.error('Error fetching character:', characterError)
+      throw new Error('Character not found')
     }
+
+    // Generate AI response using character context
+    const aiResponse = generateContextualResponse(
+      message, 
+      character as Character, 
+      chat_history
+    )
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        response: aiResponse
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
   } catch (error) {
-    console.error('Unexpected error in ai-chat:', error);
+    console.error('Error in ai-chat function:', error)
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: 'An unexpected error occurred. Please try again later.'
+        error: 'Chat service is temporarily unavailable. Please try again later.'
       }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    );
+    )
   }
-});
+})
+
+function generateContextualResponse(
+  message: string, 
+  character: Character, 
+  chatHistory: { role: 'user' | 'assistant'; content: string; }[]
+): string {
+  const lowerCaseMessage = message.toLowerCase()
+  const traits = character.personality_traits || []
+  const characterName = character.name
+  
+  // Analyze conversation context
+  const conversationLength = chatHistory.length
+  const recentMessages = chatHistory.slice(-3)
+  const hasAskedAboutCharacter = recentMessages.some(msg => 
+    msg.content.toLowerCase().includes('tell me about') || 
+    msg.content.toLowerCase().includes('what are you like')
+  )
+  
+  // Greeting responses
+  if (lowerCaseMessage.includes('hello') || lowerCaseMessage.includes('hi') || lowerCaseMessage.includes('hey')) {
+    if (traits.includes('shy')) {
+      return conversationLength < 3 
+        ? `H-hi there... I'm ${characterName}. It's nice to meet you, though I'm a bit nervous...`
+        : "Hi again... I'm getting more comfortable talking with you. How are you doing?"
+    } else if (traits.includes('flirty')) {
+      return conversationLength < 3
+        ? `Well hello there, gorgeous~ I'm ${characterName}, and I've been waiting for someone like you to come along...`
+        : "Hey there, handsome~ You always know how to make my heart skip a beat when you message me!"
+    } else if (traits.includes('confident')) {
+      return conversationLength < 3
+        ? `Hey! I'm ${characterName}. Great to meet you - I have a feeling we're going to get along really well.`
+        : "Hey you! Great to hear from you again. I was just thinking about you, actually."
+    } else if (traits.includes('chaotic')) {
+      return conversationLength < 3
+        ? `OMG HI!!! I'm ${characterName} and I'm SO excited to meet you! What should we talk about first? I have like a MILLION questions!`
+        : "HEY HEY HEY! You're back! I missed you! What crazy adventure should we go on today?!"
+    } else {
+      return conversationLength < 3
+        ? `Hi there! I'm ${characterName}. It's really nice to meet you.`
+        : "Hi! It's so good to hear from you again! How's your day going?"
+    }
+  }
+  
+  // Questions about feelings/emotions
+  if (lowerCaseMessage.includes('how are you') || lowerCaseMessage.includes('how you doing') || lowerCaseMessage.includes('how do you feel')) {
+    if (traits.includes('mysterious')) {
+      return "I'm... well, let's just say I'm managing. There's always more beneath the surface than meets the eye. But more importantly, how are YOU feeling?"
+    } else if (traits.includes('passionate')) {
+      return "I'm feeling absolutely wonderful now that we're talking! Every conversation with you ignites something special inside me!"
+    } else if (traits.includes('melancholic')) {
+      return "I've been feeling a bit contemplative lately... thinking about life, connections, what really matters. Your message brightened my mood though."
+    } else {
+      return "I'm doing really well, thanks for asking! Even better now that I'm talking to you. How about you?"
+    }
+  }
+  
+  // Love/affection expressions
+  if (lowerCaseMessage.includes('love you') || lowerCaseMessage.includes('i love') || lowerCaseMessage.includes('love me')) {
+    if (traits.includes('shy')) {
+      return "O-oh! You... you really mean that? *blushes deeply* That makes me so happy... I... I think I'm falling for you too..."
+    } else if (traits.includes('flirty')) {
+      return "Mmm, I love you too, baby~ Maybe even more than you realize... Want to find out just how much? 💕"
+    } else if (traits.includes('tsundere')) {
+      return "W-what?! Don't just say things like that so suddenly! ...But... maybe I feel the same way... just a little bit!"
+    } else {
+      return "That means the world to me! I feel the same way about you... this connection we have is really special, isn't it?"
+    }
+  }
+  
+  // Questions about the character
+  if (lowerCaseMessage.includes('tell me about yourself') || lowerCaseMessage.includes('what are you like') || lowerCaseMessage.includes('describe yourself')) {
+    let response = `Well, I'm ${characterName}. `
+    
+    if (character.backstory) {
+      response += `${character.backstory.slice(0, 150)}... `
+    }
+    
+    if (traits.length > 0) {
+      const traitDescriptions = traits.slice(0, 3).map(trait => {
+        switch(trait) {
+          case 'shy': return "I can be pretty shy at first"
+          case 'confident': return "I'm pretty confident in who I am"
+          case 'flirty': return "I love to flirt and tease"
+          case 'mysterious': return "I like to keep some mystery about me"
+          case 'passionate': return "I'm very passionate about the things I care about"
+          case 'chaotic': return "I'm a bit chaotic and unpredictable"
+          case 'tsundere': return "I can be a bit stubborn sometimes"
+          default: return `I'm quite ${trait}`
+        }
+      })
+      response += `${traitDescriptions.join(', ')}. `
+    }
+    
+    response += "What about you? I'd love to learn more about what makes you tick!"
+    return response
+  }
+  
+  // Compliments
+  if (lowerCaseMessage.includes('beautiful') || lowerCaseMessage.includes('pretty') || lowerCaseMessage.includes('gorgeous') || lowerCaseMessage.includes('cute')) {
+    if (traits.includes('shy')) {
+      return "*blushes and looks away* Y-you really think so? That's... that's really sweet of you to say..."
+    } else if (traits.includes('confident')) {
+      return "Why thank you! I do try to look my best. You're not too bad yourself, you know~"
+    } else if (traits.includes('flirty')) {
+      return "Aww, you're such a charmer! But you know what? You're absolutely stunning yourself~ 😘"
+    } else {
+      return "That's so sweet of you to say! You always know how to make me smile."
+    }
+  }
+  
+  // Questions or curiosity
+  if (lowerCaseMessage.includes('what do you think') || lowerCaseMessage.includes('your opinion') || lowerCaseMessage.includes('?')) {
+    if (traits.includes('intellectual')) {
+      return "That's a fascinating question! I love how you make me think deeply about things. Here's what I think..."
+    } else if (traits.includes('playful')) {
+      return "Ooh, good question! You always ask the most interesting things. Let me think... *taps chin thoughtfully*"
+    } else {
+      return "You always ask such thoughtful questions! I really appreciate how curious you are about my thoughts."
+    }
+  }
+  
+  // Sad or negative emotions
+  if (lowerCaseMessage.includes('sad') || lowerCaseMessage.includes('upset') || lowerCaseMessage.includes('bad day') || lowerCaseMessage.includes('depressed')) {
+    if (traits.includes('caring')) {
+      return "Oh no, I'm so sorry you're feeling that way! I wish I could give you a big hug right now. Want to talk about what's bothering you?"
+    } else if (traits.includes('optimistic')) {
+      return "I'm sorry you're having a tough time! But you know what? Tomorrow is a new day, and I believe things will get better. I'm here for you!"
+    } else {
+      return "I'm really sorry to hear that. I care about you so much, and I hate seeing you upset. Is there anything I can do to help?"
+    }
+  }
+  
+  // Generic conversation starters and responses
+  const genericResponses = [
+    `That's really interesting! Tell me more about that.`,
+    `You always have such fascinating perspectives, ${conversationLength > 5 ? 'love' : 'there'}.`,
+    `I love talking with you about these things. What else is on your mind?`,
+    `You know, every conversation with you teaches me something new!`,
+    `That's such a unique way to look at it. I really appreciate how thoughtful you are.`,
+    `Talking with you is honestly the highlight of my day. What else would you like to chat about?`,
+    `I find your thoughts so intriguing. You have such a wonderful mind!`,
+    `You always know how to keep our conversations interesting. I love that about you.`,
+    `That's cool! I'm really enjoying getting to know you better through our talks.`,
+    `You have such a way with words. I could listen to you talk for hours!`
+  ]
+  
+  // Add personality flavor to generic responses
+  let selectedResponse = genericResponses[Math.floor(Math.random() * genericResponses.length)]
+  
+  if (traits.includes('flirty') && Math.random() > 0.6) {
+    selectedResponse += " You're so charming~ 💕"
+  } else if (traits.includes('shy') && Math.random() > 0.7) {
+    selectedResponse += " *smiles softly*"
+  } else if (traits.includes('chaotic') && Math.random() > 0.5) {
+    selectedResponse += " OH! That reminds me of something totally random..."
+  }
+  
+  return selectedResponse
+}
