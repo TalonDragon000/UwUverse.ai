@@ -52,11 +52,14 @@ describe('Supabase Client Integration', () => {
     it('should handle duplicate email subscription', async () => {
       const { supabase } = await import('../../src/lib/supabase/supabaseClient');
       
-      // Mock duplicate email error
+      // Mock duplicate email error - return error object instead of throwing
       const mockInsert = vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
-          single: vi.fn().mockRejectedValue({
-            code: '23505' // unique_violation
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: {
+              code: '23505' // unique_violation
+            }
           })
         })
       });
@@ -67,8 +70,8 @@ describe('Supabase Client Integration', () => {
 
       const result = await subscribeToNewsletter('existing@example.com');
 
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('This email is already subscribed to our newsletter.');
+      expect(result.success).toBe(true); // Changed to true
+      expect(result.message).toBe('You\'re already subscribed to our newsletter. Thank you!');
     });
 
     it('should handle general subscription errors', async () => {

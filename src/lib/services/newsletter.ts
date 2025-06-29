@@ -14,6 +14,17 @@ export const subscribeToNewsletter = async (email: string, source: string = 'new
       .select()
       .single();
 
+    // Handle duplicate email case immediately after the database call
+    if (error && error.code === '23505') { // unique_violation - email already exists
+      return {
+        success: true, // Return success for duplicate emails
+        message: source === 'pro_waitlist' 
+          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
+          : 'You\'re already subscribed to our newsletter. Thank you!',
+      };
+    }
+
+    // Handle any other database errors
     if (error) throw error;
 
     // In a real application, you would send a confirmation email here
@@ -27,15 +38,6 @@ export const subscribeToNewsletter = async (email: string, source: string = 'new
       data,
     };
   } catch (error: any) {
-    if (error.code === '23505') { // unique_violation - email already exists
-      return {
-        success: true, // Changed from false to true
-        message: source === 'pro_waitlist'
-          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
-          : 'You\'re already subscribed to our newsletter. Thank you!',
-      };
-    }
-    
     return {
       success: false,
       message: source === 'pro_waitlist'
