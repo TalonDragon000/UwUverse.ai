@@ -19,6 +19,40 @@ const MEET_CUTE_SCENARIOS = [
   'coffee shop', 'neighbors', 'childhood friends', 'blind date'
 ];
 
+// Art styles with sample thumbnails
+const ART_STYLES_DATA = [
+  {
+    id: 'anime',
+    label: 'Anime',
+    thumbnail_url: 'https://images.pexels.com/photos/6157228/pexels-photo-6157228.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    description: 'Japanese animation style with large expressive eyes and vibrant colors'
+  },
+  {
+    id: 'manhwa',
+    label: 'Manhwa',
+    thumbnail_url: 'https://images.pexels.com/photos/3992656/pexels-photo-3992656.png?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    description: 'Korean webtoon style with detailed features and soft shading'
+  },
+  {
+    id: 'comic',
+    label: 'Comic',
+    thumbnail_url: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    description: 'Western comic book style with bold lines and dynamic poses'
+  },
+  {
+    id: 'realistic',
+    label: 'Realistic',
+    thumbnail_url: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    description: 'Photorealistic digital art with natural proportions and lighting'
+  },
+  {
+    id: 'cartoon',
+    label: 'Cartoon',
+    thumbnail_url: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1',
+    description: 'Stylized cartoon with exaggerated features and bright colors'
+  }
+];
+
 interface ElevenLabsVoice {
   voice_id: string;
   name: string;
@@ -342,7 +376,7 @@ const CharacterCreationPage: React.FC = () => {
       });
       
       // Call the AI service to generate character image and get Tavus data
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-service/generate-character`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image-generation`;
       const headers = {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
@@ -583,25 +617,45 @@ const CharacterCreationPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 Art Style
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {['anime', 'manhwa', 'comic', 'realistic', 'cartoon'].map((style) => (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {ART_STYLES_DATA.map((style) => (
                   <button
-                    key={style}
+                    key={style.id}
                     type="button"
-                    className={`p-3 rounded-lg border-2 text-center ${
-                      characterCreationData.art_style === style
-                        ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30'
-                        : 'border-gray-200 dark:border-gray-700'
-                    } transition-colors duration-200`}
-                    onClick={() => updateCharacterCreationData({ art_style: style as any })}
+                    className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-200 ${
+                      characterCreationData.art_style === style.id
+                        ? 'border-pink-400 bg-pink-100 dark:border-pink-600 dark:bg-pink-900/30 ring-2 ring-pink-300 dark:ring-pink-700'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 dark:hover:border-pink-600'
+                    }`}
+                    onClick={() => updateCharacterCreationData({ art_style: style.id as any })}
                   >
-                    <span className="capitalize">{style}</span>
+                    <div className="aspect-square">
+                      <img
+                        src={style.thumbnail_url}
+                        alt={`${style.label} art style example`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="text-white font-semibold text-sm">{style.label}</h3>
+                      </div>
+                    </div>
+                    {characterCreationData.art_style === style.id && (
+                      <div className="absolute top-2 right-2">
+                        <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                          <Heart className="w-3 h-3 text-white fill-current" />
+                        </div>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Choose the visual style for your AI companion's appearance
+              </p>
             </div>
           </div>
         );
@@ -905,9 +959,9 @@ const CharacterCreationPage: React.FC = () => {
                 <p><strong>Name:</strong> {characterCreationData.name}</p>
                 <p><strong>Gender:</strong> {characterCreationData.gender === 'male' ? 'Boyfriend' : characterCreationData.gender === 'female' ? 'Girlfriend' : 'Non-Binary Partner'}</p>
                 <p><strong>Appearance:</strong> {characterCreationData.height} height, {characterCreationData.build} build, {characterCreationData.eye_color} eyes, {characterCreationData.hair_color} hair</p>
+                <p><strong>Art Style:</strong> {characterCreationData.art_style}</p>
                 <p><strong>Personality:</strong> {selectedTraits.join(', ')}</p>
                 <p><strong>Voice:</strong> {characterCreationData.voice_accent || 'Not selected'}</p>
-                <p><strong>Style:</strong> {characterCreationData.art_style} art style</p>
                 <p><strong>How You Met:</strong> {characterCreationData.meet_cute}</p>
               </div>
             </div>
