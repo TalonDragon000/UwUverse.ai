@@ -1,4 +1,4 @@
-import * as Purchases from '@revenuecat/purchases-js';
+import * as Purchases from '@revenuecat/purchases-web';
 import { supabase } from '../supabase/supabaseClient';
 
 const REVCAT_API_KEY = import.meta.env.VITE_REVCAT_API_KEY;
