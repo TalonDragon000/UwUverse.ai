@@ -18,50 +18,40 @@ export const checkIfSubscribed = async (email: string): Promise<boolean> => {
 
 export const subscribeToNewsletter = async (email: string, source: string = 'newsletter') => {
   try {
-    // First, check if the email already exists
-    const { data: existingSubscriber, error: checkError } = await supabase
-      .from('newsletter_subscribers')
-      .select('email, source')
-      .eq('email', email)
-      .single();
+    // Call the Beehiiv Edge Function
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beehiiv-newsletter`;
+    const headers = {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    };
 
-    // If we found an existing subscriber, return success message
-    if (existingSubscriber && !checkError) {
-      return {
-        success: true,
-        message: source === 'pro_waitlist' 
-          ? 'You\'re already on the Pro waitlist and subscribed to our newsletter!'
-          : 'You\'re already subscribed to our newsletter. Thank you!',
-      };
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        email,
+        source,
+        send_welcome_email: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to subscribe to newsletter');
     }
 
-    // If no existing subscriber found, proceed with insert
-    const { data, error } = await supabase
-      .from('newsletter_subscribers')
-      .insert([
-        {
-          email,
-          confirmation_token: crypto.randomUUID(),
-          source, // Add source tracking
-        }
-      ])
-      .select()
-      .single();
+    const data = await response.json();
 
-    // Handle any database errors
-    if (error) throw error;
-
-    // In a real application, you would send a confirmation email here
-    // using a service like SendGrid, Mailgun, etc.
-    
     return {
       success: true,
-      message: source === 'pro_waitlist' 
-        ? 'Successfully added to Pro waitlist and subscribed to newsletter!'
-        : 'Successfully subscribed to newsletter!',
-      data,
+      message: data.message,
+      already_subscribed: data.already_subscribed || false,
+      beehiiv_status: data.beehiiv_status,
+      fallback: data.fallback || false,
+      note: data.note,
     };
   } catch (error: any) {
+    console.error('Newsletter subscription error:', error);
     return {
       success: false,
       message: source === 'pro_waitlist'
@@ -97,6 +87,28 @@ export const confirmSubscription = async (token: string) => {
 
 export const unsubscribeFromNewsletter = async (email: string) => {
   try {
+    // Call Beehiiv API to unsubscribe
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beehiiv-newsletter/unsubscribe`;
+    const headers = {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ email }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Successfully unsubscribed from newsletter.',
+      };
+    }
+
+    // Fallback to local database update
     const { error } = await supabase
       .from('newsletter_subscribers')
       .update({
@@ -123,7 +135,7 @@ export const getWaitlistSubscribers = async () => {
   try {
     const { data, error } = await supabase
       .from('newsletter_subscribers')
-      .select('email, created_at, confirmed')
+      .select('email, created_at, confirmed, source')
       .eq('source', 'pro_waitlist')
       .order('created_at', { ascending: false });
 
@@ -137,6 +149,35 @@ export const getWaitlistSubscribers = async () => {
     return {
       success: false,
       error: 'Failed to fetch waitlist subscribers.',
+    };
+  }
+};
+
+// New function to sync local subscribers with Beehiiv (for admin use)
+export const syncWithBeehiiv = async () => {
+  try {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beehiiv-newsletter/sync`;
+    const headers = {
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+    });
+
+    const data = await response.json();
+
+    return {
+      success: response.ok,
+      message: data.message,
+      synced_count: data.synced_count,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'Failed to sync with Beehiiv.',
     };
   }
 };
