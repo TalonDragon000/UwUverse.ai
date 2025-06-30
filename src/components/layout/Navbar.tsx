@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, Moon, Sun, User, X, ExternalLink } from 'lucide-react';
+import { Menu, Moon, Sun, User, X } from 'lucide-react';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase/supabaseClient';
@@ -42,15 +42,16 @@ const Navbar: React.FC = () => {
               Pricing
             </Link>
             
-            <a
-              href="https://uwuverse.beehiiv.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center px-4 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+            <Link
+              to="/blog"
+              className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                location.pathname === '/blog'
+                  ? 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
             >
               Blog
-              <ExternalLink className="h-4 w-4 ml-1" />
-            </a>
+            </Link>
             
             <button
               onClick={toggleTheme}
@@ -129,16 +130,13 @@ const Navbar: React.FC = () => {
               Pricing
             </Link>
             
-            <a
-              href="https://uwuverse.beehiiv.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+            <Link
+              to="/blog"
+              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
               Blog
-              <ExternalLink className="h-4 w-4 ml-1" />
-            </a>
+            </Link>
             
             <button
               onClick={toggleTheme}
