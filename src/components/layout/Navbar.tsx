@@ -23,8 +23,12 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center">
-              <UwuIcon size={32} className="animate-heartbeat" />
-              <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <UwuIcon 
+                size={40} 
+                useImage={true} 
+                className="animate-heartbeat" 
+              />
+              <span className="ml-3 text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
                 UwUverse.ai
               </span>
             </Link>

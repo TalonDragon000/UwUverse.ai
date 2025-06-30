@@ -147,8 +147,8 @@ const LandingPage: React.FC = () => {
             
             {/* UwUverse.ai branding on its own line */}
             <div className="flex items-center justify-center">
-              <UwuIcon size={24} />
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <UwuIcon size={32} useImage={true} />
+              <span className="ml-3 text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
                 UwUverse.ai
               </span>
             </div>

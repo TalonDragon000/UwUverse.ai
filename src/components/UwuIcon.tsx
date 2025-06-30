@@ -3,14 +3,36 @@ import React from 'react';
 interface UwuIconProps extends React.SVGProps<SVGSVGElement> {
   size?: number;
   variant?: 'default' | 'black' | 'white';
+  useImage?: boolean; // New prop to use the PNG image instead of SVG
 }
 
 const UwuIcon: React.FC<UwuIconProps> = ({ 
   size = 24, 
   variant = 'default',
+  useImage = false, // Default to false to maintain backward compatibility
   className = '',
   ...props 
 }) => {
+  // If useImage is true, render the PNG image
+  if (useImage) {
+    return (
+      <img
+        src="/uwu icon large pink.png"
+        alt="UwUverse.ai Logo"
+        width={size}
+        height={size}
+        className={`${className}`}
+        style={{ 
+          width: size, 
+          height: size,
+          objectFit: 'contain'
+        }}
+        {...props}
+      />
+    );
+  }
+
+  // Original SVG fallback
   const getColorClass = () => {
     switch (variant) {
       case 'black':
