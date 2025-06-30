@@ -31,6 +31,18 @@ const Navbar: React.FC = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? (
+                <Moon className="h-5 w-5 text-gray-600" />
+              ) : (
+                <Sun className="h-5 w-5 text-yellow-300" />
+              )}
+            </button>
+            
             <Link
               to="/pricing"
               className={`px-4 py-2 rounded-full transition-colors duration-200 ${
@@ -52,18 +64,6 @@ const Navbar: React.FC = () => {
             >
               Blog
             </Link>
-            
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? (
-                <Moon className="h-5 w-5 text-gray-600" />
-              ) : (
-                <Sun className="h-5 w-5 text-yellow-300" />
-              )}
-            </button>
             
             {session ? (
               <>
@@ -122,22 +122,6 @@ const Navbar: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-800 shadow-lg">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link
-              to="/pricing"
-              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            
-            <Link
-              to="/blog"
-              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Blog
-            </Link>
-            
             <button
               onClick={toggleTheme}
               className="flex items-center w-full px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
@@ -154,6 +138,22 @@ const Navbar: React.FC = () => {
                 </>
               )}
             </button>
+            
+            <Link
+              to="/pricing"
+              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Pricing
+            </Link>
+            
+            <Link
+              to="/blog"
+              className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Blog
+            </Link>
             
             {session ? (
               <>
